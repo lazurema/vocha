@@ -1,0 +1,2 @@
+gen-textgrid-pympi-bin:
+    uv --project=scripts run ./scripts/gen-textgrid-pympi-bin.py

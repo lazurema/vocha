@@ -1,0 +1,103 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0
+xmax = 2045.144149659864
+tiers? <exists>
+size = 3
+item []:
+    item [1]:
+        class = "IntervalTier"
+        name = "utterances"
+        xmin = 0
+        xmax = 2045.144149659864
+        intervals: size = 5
+        intervals [1]:
+            xmin = 0
+            xmax = 2041.4217474125382
+            text = ""
+        intervals [2]:
+            xmin = 2041.4217474125382
+            xmax = 2041.968276643991
+            text = "this"
+        intervals [3]:
+            xmin = 2041.968276643991
+            xmax = 2042.5281632653062
+            text = "is"
+        intervals [4]:
+            xmin = 2042.5281632653062
+            xmax = 2044.0487352585324
+            text = "a"
+        intervals [5]:
+            xmin = 2044.0487352585324
+            xmax = 2045.144149659864
+            text = "demo"
+    item [2]:
+        class = "TextTier"
+        name = "notes"
+        xmin = 0
+        xmax = 2045.144149659864
+        points: size = 3
+        points [1]:
+            time = 2041.4217474125382
+            mark = ".begin_demo"
+        points [2]:
+            time = 2043.8338291031832
+            mark = "voice gets quiet here"
+        points [3]:
+            time = 2045.144149659864
+            mark = ".end_demo"
+    item [3]:
+        class = "IntervalTier"
+        name = "phones"
+        xmin = 0
+        xmax = 2045.144149659864
+        intervals: size = 12
+        intervals [1]:
+            xmin = 0
+            xmax = 2041.4217474125382
+            text = ""
+        intervals [2]:
+            xmin = 2041.4217474125382
+            xmax = 2041.5438290324326
+            text = "D"
+        intervals [3]:
+            xmin = 2041.5438290324326
+            xmax = 2041.7321032910372
+            text = "I"
+        intervals [4]:
+            xmin = 2041.7321032910372
+            xmax = 2041.968276643991
+            text = "s"
+        intervals [5]:
+            xmin = 2041.968276643991
+            xmax = 2042.232189031843
+            text = "I"
+        intervals [6]:
+            xmin = 2042.232189031843
+            xmax = 2042.5281632653062
+            text = "z"
+        intervals [7]:
+            xmin = 2042.5281632653062
+            xmax = 2044.0487352585324
+            text = "eI"
+        intervals [8]:
+            xmin = 2044.0487352585324
+            xmax = 2044.2487352585324
+            text = "dc"
+        intervals [9]:
+            xmin = 2044.2487352585324
+            xmax = 2044.3102321849011
+            text = "d"
+        intervals [10]:
+            xmin = 2044.3102321849011
+            xmax = 2044.5748932104329
+            text = "E"
+        intervals [11]:
+            xmin = 2044.5748932104329
+            xmax = 2044.8329108578437
+            text = "m"
+        intervals [12]:
+            xmin = 2044.8329108578437
+            xmax = 2045.144149659864
+            text = "oU"

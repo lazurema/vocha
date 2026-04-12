@@ -1,0 +1,15 @@
+[package]
+name = "textgrid-rs"
+version = "0.1.0"
+edition = "2024"
+description = "A Rust library for working with Praat TextGrid files."
+license = "MIT"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+snafu.workspace = true
+
+[dev-dependencies]
+include_dir = { workspace = true, features = ["glob"] }
+pretty_assertions.workspace = true
+ron.workspace = true

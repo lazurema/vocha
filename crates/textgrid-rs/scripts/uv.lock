@@ -1,0 +1,27 @@
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[options]
+exclude-newer = "2026-04-06T03:47:23.80743Z"
+exclude-newer-span = "P7D"
+
+[[package]]
+name = "pympi-ling"
+version = "1.71"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/b1/11e08f4e51e173fec0e1633ef68e0f61bb098297097a861123971bff3f8f/pympi_ling-1.71.tar.gz", hash = "sha256:d4e2481285bace4d1a8d90ad59abfe4bf289e529ce086551a975c3ce26e0b9d4", size = 375733, upload-time = "2025-08-18T13:56:11.321Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6f/64/3731b9770449857b51a17c269893b02e1e6a502bfafea5fca19ec1ab0600/pympi_ling-1.71-py3-none-any.whl", hash = "sha256:f89043d275946d9fe04c09cd5a5fbcff1e42b4160c91c8aa246e5e8136e305ab", size = 25659, upload-time = "2025-08-18T13:56:09.697Z" },
+]
+
+[[package]]
+name = "scripts"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "pympi-ling" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pympi-ling", specifier = ">=1.71" }]
