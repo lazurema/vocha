@@ -3,7 +3,9 @@ name = "textgrid-rs"
 version = "0.1.0"
 edition = "2024"
 description = "A Rust library for working with Praat TextGrid files."
-license = "MIT"
+license.workspace = true
+repository.workspace = true
+homepage = "https://github.com/lazurema/vocha/tree/main/crates/textgrid-rs"
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
