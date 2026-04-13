@@ -1,0 +1,8 @@
+build-release-macos:
+    cargo build --release --target aarch64-apple-darwin
+
+build-release-linux-aarch64:
+    cross build --release --target=aarch64-unknown-linux-gnu
+
+build-release-windows:
+    cargo build --release --target=x86_64-pc-windows-gnu  

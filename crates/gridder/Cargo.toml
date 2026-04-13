@@ -1,0 +1,38 @@
+[package]
+name = "gridder"
+version = "0.1.0"
+edition = "2024"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+gridder-egui-widgets.workspace = true
+textgrid-rs.workspace = true
+
+eframe = { workspace = true, default-features = false, features = [
+  "accesskit",
+  "wayland",
+  "x11",
+  "wgpu",
+] }
+
+snafu.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+font-kit.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-foundation = { workspace = true, features = [
+  "NSLocale",
+  "NSArray",
+  "NSString",
+] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = ["Globalization"] }
+
+[package.metadata.cross.target.aarch64-unknown-linux-gnu]
+pre-build = [
+  "dpkg --add-architecture $CROSS_DEB_ARCH",
+  "apt update && apt --assume-yes install libfontconfig-dev:$CROSS_DEB_ARCH",
+]

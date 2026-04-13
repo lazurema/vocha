@@ -1,13 +1,28 @@
 [workspace]
 resolver = "3"
-members = ["crates/textgrid-rs"]
+members = [
+  "crates/gridder",
+  "crates/gridder-egui-widgets",
+  "crates/textgrid-rs",
+]
 
 [workspace.dependencies]
+gridder-egui-widgets = { version = "0.1.0", path = "crates/gridder-egui-widgets" }
+textgrid-rs = { version = "0.1.0", path = "crates/textgrid-rs" }
+
+eframe = { version = "0.34.1", default-features = false }
+egui = { version = "0.34.1", default-features = false }
+font-kit = "0.14.3"
 include_dir = "0.7.4"
 pretty_assertions = "1.4.1"
 ron = "0.12.1"
 serde = "1.0.228"
 snafu = "0.9.0"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
+windows = "0.62.2"
+objc2-foundation = "0.3.2"
+
 
 [workspace.package]
 license = "MIT"
