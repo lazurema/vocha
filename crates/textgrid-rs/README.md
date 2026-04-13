@@ -2,12 +2,6 @@
 
 A crate for working with Praat TextGrid files in Rust.
 
-> [!IMPORTANT]
-> **Disclaimer:** At the time of publishing the first version of this crate, I
-> had never used any tools that directly interact with TextGrid files. In other
-> words, I have zero prior experience with the format. Use this crate at your
-> own risk.
-
 ## Other Rust implementations
 
 - [`textgrid`](https://crates.io/crates/textgrid)
