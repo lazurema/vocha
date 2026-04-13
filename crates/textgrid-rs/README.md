@@ -1,5 +1,9 @@
 # `textgrid-rs`
 
+[![Crates.io Version](https://img.shields.io/crates/v/textgrid-rs)](https://crates.io/crates/textgrid-rs)
+[![docs.rs](https://img.shields.io/docsrs/textgrid-rs)](https://docs.rs/textgrid-rs)
+[![GitHub License](https://img.shields.io/github/license/lazurema/vocha)](https://github.com/lazurema/vocha/blob/main/LICENSE)
+
 A crate for working with Praat TextGrid files in Rust.
 
 ## Other Rust implementations
