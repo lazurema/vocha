@@ -868,6 +868,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui-phosphor"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb4e4b18e368ff336c8dd2102992e2631b118f29a2164b0d2be9d8889dcd367e"
+dependencies = [
+ "egui",
+]
+
+[[package]]
 name = "egui-wgpu"
 version = "0.34.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1429,6 +1438,7 @@ name = "gridder"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "egui-phosphor",
  "font-kit",
  "gridder-egui-widgets",
  "objc2-foundation 0.3.2",
@@ -1436,6 +1446,7 @@ dependencies = [
  "textgrid-rs",
  "tracing",
  "tracing-subscriber",
+ "uuid",
  "windows",
 ]
 
@@ -3404,6 +3415,7 @@ version = "1.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ac8b6f42ead25368cf5b098aeb3dc8a1a2c05a3eee8a9a1a68c640edbfc79d9"
 dependencies = [
+ "getrandom 0.4.2",
  "js-sys",
  "serde_core",
  "wasm-bindgen",

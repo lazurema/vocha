@@ -12,6 +12,8 @@ textgrid-rs = { version = "0.1.0", path = "crates/textgrid-rs" }
 
 eframe = { version = "0.34.1", default-features = false }
 egui = { version = "0.34.1", default-features = false }
+egui-phosphor = "0.12"
+
 font-kit = "0.14.3"
 include_dir = "0.7.4"
 pretty_assertions = "1.4.1"
@@ -20,6 +22,8 @@ serde = "1.0.228"
 snafu = "0.9.0"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
+uuid = "1.23.0"
+
 windows = "0.62.2"
 objc2-foundation = "0.3.2"
 

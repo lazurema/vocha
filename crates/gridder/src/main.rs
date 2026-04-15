@@ -2,6 +2,8 @@
 
 mod app;
 mod font_loading;
+mod l10n;
+mod projects;
 
 use snafu::prelude::*;
 
@@ -13,10 +15,9 @@ fn main() -> Result<(), snafu::Whatever> {
 
     tracing::info!("Starting Gridder…");
 
-    let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "Gridder",
-        native_options,
+        GridderApp::name(),
+        GridderApp::native_options(),
         Box::new(|cc| Ok(Box::new(GridderApp::new(cc)))),
     )
     .whatever_context("Failed to run the eframe App.")?;
