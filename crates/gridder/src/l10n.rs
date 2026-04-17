@@ -94,6 +94,7 @@ pub enum Term {
     GridderProject {
         name: Option<String>,
     },
+    Theme,
 }
 
 pub trait Language: Send + Sync {
@@ -150,8 +151,9 @@ impl Language for English {
             }
             GridderProject { name } => match name {
                 Some(name) => format!("Gridder Project - {}", name),
-                None => "Gridder Project".to_string(),
+                None => "Gridder Project".to_owned(),
             },
+            Theme => "Theme".to_owned(),
         }
     }
 }

@@ -166,16 +166,19 @@ impl GridderApp {
                     .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
             )
             .ui(ui, |ui| {
-                self.always_on_top_toggle(ui);
+                egui::Grid::new("settings_grid").show(ui, |ui| {
+                    self.settings_always_on_top_toggle(ui);
+                    ui.end_row();
+                    self.settings_theme_selector(ui);
+                    ui.end_row();
+                });
             });
     }
 
-    fn always_on_top_toggle(&mut self, ui: &mut egui::Ui) {
+    fn settings_always_on_top_toggle(&mut self, ui: &mut egui::Ui) {
         let old = self.is_always_on_top;
-        ui.checkbox(
-            &mut self.is_always_on_top,
-            self.l10n.tl(&Term::AlwaysOnTopToggleLabel),
-        );
+        ui.label(self.l10n.tl(&Term::AlwaysOnTopToggleLabel));
+        egui::Checkbox::without_text(&mut self.is_always_on_top).ui(ui);
         if old != self.is_always_on_top {
             ui.ctx()
                 .send_viewport_cmd(egui::ViewportCommand::WindowLevel(
@@ -186,5 +189,24 @@ impl GridderApp {
                     },
                 ));
         }
+    }
+
+    fn settings_theme_selector(&mut self, ui: &mut egui::Ui) {
+        ui.label(self.l10n.tl(&Term::Theme));
+
+        ui.horizontal(|ui| {
+            let mut theme = ui.theme();
+            let old_theme = theme.clone();
+
+            ui.scope(|ui| {
+                ui.style_mut().spacing.item_spacing.x = 0.0;
+                ui.selectable_value(&mut theme, egui::Theme::Dark, egui_phosphor::regular::MOON);
+                ui.selectable_value(&mut theme, egui::Theme::Light, egui_phosphor::regular::SUN);
+            });
+
+            if theme != old_theme {
+                ui.set_theme(theme);
+            }
+        });
     }
 }
