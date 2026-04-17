@@ -140,6 +140,11 @@ pub struct Project {
     audio: ProjectAudioLifeCycle,
     textgrid_path: Option<PathBuf>,
     textgrid: ProjectTextGridLifeCycle,
+
+    last_frame_title_name: Option<Option<String>>,
+
+    points_per_second: f32,
+    offset_points: f32,
 }
 
 enum ProjectAudioLifeCycle {
@@ -162,8 +167,6 @@ enum ProjectTextGridLifeCycle {
     Loaded(TextGrid),
     Error(String),
 }
-
-type ProjectTitleNamePublisher<'a> = egui::cache::FramePublisher<egui::Id, Option<String>>;
 
 impl Project {
     pub fn try_from_preview_from_dropping_files(preview: &ProjectPreview) -> Option<Self> {
@@ -190,15 +193,12 @@ impl Project {
             audio: ProjectAudioLifeCycle::Absent,
             textgrid_path: None,
             textgrid: ProjectTextGridLifeCycle::Absent,
+            last_frame_title_name: None,
         }
     }
 
     pub fn id(&self) -> uuid::Uuid {
         self.uuid
-    }
-
-    fn egui_id(&self) -> egui::Id {
-        egui::Id::new(self.uuid)
     }
 
     fn title_name(&self) -> Option<String> {
@@ -280,18 +280,16 @@ impl Project {
             self.update_textgrid();
         }
 
-        let new_title_name = ui.memory_mut(|mem| {
-            let project_title_name_publisher = mem.caches.cache::<ProjectTitleNamePublisher<'_>>();
-            let id = self.egui_id();
-            let last_name = project_title_name_publisher.get(&id).cloned().flatten();
-            let name = self.title_name();
-            project_title_name_publisher.set(id, name.clone());
-            if last_name != name { Some(name) } else { None }
-        });
-        if let Some(new_title_name) = new_title_name {
+        let new_title_name = self.title_name();
+        if self
+            .last_frame_title_name
+            .as_ref()
+            .is_none_or(|old_title_name| old_title_name != &new_title_name)
+        {
             ui.send_viewport_cmd(egui::ViewportCommand::Title(l.tl(&Term::GridderProject {
-                name: new_title_name,
+                name: new_title_name.clone(),
             })));
+            self.last_frame_title_name = Some(new_title_name);
         }
 
         egui::Grid::new(ui.next_auto_id()).show(ui, |ui| {
