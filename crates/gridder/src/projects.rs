@@ -1,11 +1,17 @@
 use std::{
     io::Read,
+    num::{NonZeroU16, NonZeroU32},
     path::{Path, PathBuf},
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, mpsc},
     thread,
 };
 
 use eframe::egui::{self, Widget as _};
+
+use gridder_egui_widgets::waveform::{WaveData, Waveform};
+use rodio::Source as _;
+
+use sha2::Digest as _;
 use textgrid_rs::TextGrid;
 
 use crate::l10n::{L10N, Term};
@@ -106,37 +112,31 @@ impl ProjectPreview {
 pub struct Project {
     uuid: uuid::Uuid,
 
-    next_task_id: usize,
-
+    audio_path: Option<PathBuf>,
     audio: ProjectAudioLifeCycle,
+    textgrid_path: Option<PathBuf>,
     textgrid: ProjectTextGridLifeCycle,
 }
 
 enum ProjectAudioLifeCycle {
     Absent,
-    Loading {
-        path: PathBuf,
-        data: Arc<RwLock<LoadingData<ProjectAudio>>>,
-    },
+    Loading(Mutex<mpsc::Receiver<Result<ProjectAudio, String>>>),
     Loaded(ProjectAudio),
     Error(String),
 }
 
-pub struct ProjectAudio {}
+struct ProjectAudio {
+    id: egui::Id,
+    sample_rate: NonZeroU32,
+    channels: NonZeroU16,
+    samples_interleaved: Arc<[f32]>,
+}
 
 enum ProjectTextGridLifeCycle {
     Absent,
-    Loading {
-        path: PathBuf,
-        data: Arc<RwLock<LoadingData<TextGrid>>>,
-    },
+    Loading(Mutex<mpsc::Receiver<Result<TextGrid, String>>>),
     Loaded(TextGrid),
     Error(String),
-}
-
-struct LoadingData<T> {
-    data: Option<Result<T, String>>,
-    id: usize,
 }
 
 impl Project {
@@ -160,8 +160,9 @@ impl Project {
     fn new() -> Self {
         Self {
             uuid: uuid::Uuid::new_v7(uuid::Timestamp::now(uuid::NoContext)),
-            next_task_id: 0,
+            audio_path: None,
             audio: ProjectAudioLifeCycle::Absent,
+            textgrid_path: None,
             textgrid: ProjectTextGridLifeCycle::Absent,
         }
     }
@@ -171,43 +172,44 @@ impl Project {
     }
 
     fn load_audio(&mut self, path: &PathBuf) {
-        let id = self.next_task_id;
-        self.next_task_id += 1;
-
-        let data = Arc::new(RwLock::new(LoadingData { data: None, id }));
-        self.audio = ProjectAudioLifeCycle::Loading {
-            path: path.clone(),
-            data: data.clone(),
-        };
+        let (tx, rx) = mpsc::channel();
+        self.audio_path = Some(path.clone());
+        self.audio = ProjectAudioLifeCycle::Loading(Mutex::new(rx));
 
         thread::spawn({
-            let data = data.clone();
+            let path = path.clone();
             move || {
-                // TODO: actually load the audio data.
-                let loaded_data = ProjectAudio {};
+                let file = std::fs::File::open(&path).map_err(|e| e.to_string());
+                let loaded_data = file.and_then(|f| {
+                    let source = rodio::Decoder::new(std::io::BufReader::new(f))
+                        .map_err(|e| e.to_string())?;
+                    let sample_rate = source.sample_rate();
+                    let channels = source.channels();
+                    let samples_interleaved = source.collect::<Vec<_>>();
 
-                let mut loading_data = data
-                    .write()
-                    .expect("Failed to acquire write lock on loading data.");
-                if loading_data.id == id {
-                    loading_data.data = Some(Ok(loaded_data));
-                }
+                    let samples_sha256 =
+                        sha2::Sha256::digest(bytemuck::cast_slice::<f32, u8>(&samples_interleaved));
+                    let id = egui::Id::new(&samples_sha256);
+
+                    Ok(ProjectAudio {
+                        id,
+                        sample_rate,
+                        channels,
+                        samples_interleaved: Arc::from(samples_interleaved),
+                    })
+                });
+
+                tx.send(loaded_data).ok();
             }
         });
     }
 
     fn load_textgrid(&mut self, path: &PathBuf) {
-        let id = self.next_task_id;
-        self.next_task_id += 1;
-
-        let data = Arc::new(RwLock::new(LoadingData { data: None, id }));
-        self.textgrid = ProjectTextGridLifeCycle::Loading {
-            path: path.clone(),
-            data: data.clone(),
-        };
+        let (tx, rx) = mpsc::channel();
+        self.textgrid_path = Some(path.clone());
+        self.textgrid = ProjectTextGridLifeCycle::Loading(Mutex::new(rx));
 
         thread::spawn({
-            let data = data.clone();
             let path = path.clone();
             move || {
                 let file = std::fs::File::open(&path).map_err(|e| e.to_string());
@@ -217,17 +219,133 @@ impl Project {
                     TextGrid::parse_text_format(&content).map_err(|e| e.to_string())
                 });
 
-                let mut loading_data = data
-                    .write()
-                    .expect("Failed to acquire write lock on loading data.");
-                if loading_data.id == id {
-                    loading_data.data = Some(loaded_data);
-                }
+                tx.send(loaded_data).ok();
             }
         });
     }
 
-    pub fn ui(&self, ui: &mut egui::Ui, l: L10N) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, l: L10N) {
+        self.update_audio();
+        self.update_textgrid();
+
         ui.label("TODO");
+
+        match self.audio {
+            ProjectAudioLifeCycle::Absent => {}
+            ProjectAudioLifeCycle::Loading(_) => {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label(l.tl(&Term::LoadingThing {
+                        thing: "audio",
+                        path: self.audio_path.as_ref().unwrap().display().to_string(),
+                    }));
+                });
+            }
+            ProjectAudioLifeCycle::Loaded(ref audio) => {
+                self.waveforms_ui(ui, audio);
+            }
+            ProjectAudioLifeCycle::Error(ref e) => {
+                ui.label(l.tl(&Term::FailedToLoadThing {
+                    thing: "audio",
+                    path: self.audio_path.as_ref().unwrap().display().to_string(),
+                    error: e.clone(),
+                }));
+            }
+        }
+
+        match self.textgrid {
+            ProjectTextGridLifeCycle::Absent => {}
+            ProjectTextGridLifeCycle::Loading(_) => {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label(l.tl(&Term::LoadingThing {
+                        thing: "TextGrid",
+                        path: self.textgrid_path.as_ref().unwrap().display().to_string(),
+                    }));
+                });
+            }
+            ProjectTextGridLifeCycle::Loaded(_) => {
+                ui.label("TODO: TextGrid loaded.");
+            }
+            ProjectTextGridLifeCycle::Error(ref e) => {
+                ui.label(l.tl(&Term::FailedToLoadThing {
+                    thing: "TextGrid",
+                    path: self.textgrid_path.as_ref().unwrap().display().to_string(),
+                    error: e.clone(),
+                }));
+            }
+        }
+    }
+
+    fn update_audio(&mut self) {
+        let mut new_audio = None;
+        match self.audio {
+            ProjectAudioLifeCycle::Loading(ref rx) => {
+                let rx = rx
+                    .lock()
+                    .expect("Failed to acquire lock on audio loading rx.");
+                if let Ok(result) = rx.try_recv() {
+                    match result {
+                        Ok(loaded_data) => {
+                            new_audio = Some(ProjectAudioLifeCycle::Loaded(loaded_data));
+                        }
+                        Err(e) => {
+                            new_audio = Some(ProjectAudioLifeCycle::Error(e));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        if let Some(new_audio) = new_audio {
+            self.audio = new_audio;
+        }
+    }
+
+    fn update_textgrid(&mut self) {
+        let mut new_textgrid = None;
+        match self.textgrid {
+            ProjectTextGridLifeCycle::Loading(ref rx) => {
+                let rx = rx
+                    .lock()
+                    .expect("Failed to acquire lock on textgrid loading rx.");
+                if let Ok(result) = rx.try_recv() {
+                    match result {
+                        Ok(loaded_data) => {
+                            new_textgrid = Some(ProjectTextGridLifeCycle::Loaded(loaded_data));
+                        }
+                        Err(e) => {
+                            new_textgrid = Some(ProjectTextGridLifeCycle::Error(e));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+        if let Some(new_textgrid) = new_textgrid {
+            self.textgrid = new_textgrid;
+        }
+    }
+
+    fn waveforms_ui(&self, ui: &mut egui::Ui, audio: &ProjectAudio) {
+        const TMP_HEIGHT: f32 = 200.0;
+        const TMP_POINTS_PER_SECOND: f32 = 500.0;
+        const TMP_OFFSET_POINTS: f32 = 0.0;
+
+        let wave_data = Arc::new(WaveData {
+            id: audio.id,
+            sample_rate: audio.sample_rate,
+            channels: audio.channels,
+            samples_interleaved: audio.samples_interleaved.clone(),
+        });
+
+        for channel in 0..audio.channels.get() {
+            let desired_size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
+
+            Waveform::new(desired_size, wave_data.clone(), channel)
+                .points_per_second(TMP_POINTS_PER_SECOND)
+                .offset_points(TMP_OFFSET_POINTS)
+                .ui(ui);
+        }
     }
 }

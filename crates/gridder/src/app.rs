@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use eframe::egui::{self, ViewportBuilder, Widget as _};
 
@@ -12,7 +12,7 @@ pub struct GridderApp {
     l10n: L10N,
     is_always_on_top: bool,
 
-    projects: Arc<RwLock<Vec<Arc<Project>>>>,
+    projects: Arc<RwLock<Vec<Arc<(uuid::Uuid, Mutex<Project>)>>>>,
 }
 
 impl GridderApp {
@@ -100,7 +100,7 @@ impl eframe::App for GridderApp {
                             self.projects
                                 .write()
                                 .expect("Failed to acquire write lock on projects.")
-                                .push(Arc::new(project));
+                                .push(Arc::new((project.id(), Mutex::new(project))));
                         } else {
                             project_preview.ui(ui, &self.l10n);
                         }
@@ -124,9 +124,13 @@ impl eframe::App for GridderApp {
                 let project = project.clone();
                 let l10n = self.l10n.clone();
                 ui.ctx().show_viewport_deferred(
-                    egui::ViewportId::from_hash_of(project.id()),
+                    egui::ViewportId::from_hash_of(project.0),
                     egui::ViewportBuilder::default(),
                     move |ui, class| {
+                        let mut project = project
+                            .1
+                            .lock()
+                            .expect("Failed to acquire lock on project.");
                         if class == egui::ViewportClass::EmbeddedWindow {
                             project.ui(ui, l10n.clone());
                         } else {
@@ -137,7 +141,7 @@ impl eframe::App for GridderApp {
                                     projects
                                         .write()
                                         .expect("Failed to acquire write lock on projects.")
-                                        .retain(|p| p.id() != project.id());
+                                        .retain(|p| p.0 != project.id());
                                 }
                             });
                         }

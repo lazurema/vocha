@@ -7,23 +7,30 @@ members = [
 ]
 
 [workspace.dependencies]
+# Crates developed in this workspace.
 gridder-egui-widgets = { version = "0.1.0", path = "crates/gridder-egui-widgets" }
 textgrid-rs = { version = "0.1.0", path = "crates/textgrid-rs" }
 
+# `egui`-related dependencies.
 eframe = { version = "0.34.1", default-features = false }
 egui = { version = "0.34.1", default-features = false }
 egui-phosphor = "0.12"
 
+# Other dependencies.
+bytemuck = "1.25.0"
 font-kit = "0.14.3"
 include_dir = "0.7.4"
 pretty_assertions = "1.4.1"
+rodio = { version = "0.22.2", default-features = false }
 ron = "0.12.1"
 serde = "1.0.228"
+sha2 = "0.11.0"
 snafu = "0.9.0"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 uuid = "1.23.0"
 
+# Platform-specific dependencies.
 windows = "0.62.2"
 objc2-foundation = "0.3.2"
 

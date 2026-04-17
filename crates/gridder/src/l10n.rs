@@ -82,6 +82,15 @@ pub enum Term {
         has_audio: bool,
         has_textgrid: bool,
     },
+    LoadingThing {
+        thing: &'static str,
+        path: String,
+    },
+    FailedToLoadThing {
+        thing: &'static str,
+        path: String,
+        error: String,
+    },
 }
 
 pub trait Language: Send + Sync {
@@ -131,6 +140,10 @@ impl Language for English {
                 };
 
                 format!("A project of {} will be opened.", desc)
+            }
+            LoadingThing { thing, path } => format!("Loading {}: {}", thing, path),
+            FailedToLoadThing { thing, path, error } => {
+                format!("Failed to load {}: {}\n{}", thing, path, error)
             }
         }
     }
