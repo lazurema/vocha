@@ -91,6 +91,9 @@ pub enum Term {
         path: String,
         error: String,
     },
+    GridderProject {
+        name: Option<String>,
+    },
 }
 
 pub trait Language: Send + Sync {
@@ -145,6 +148,10 @@ impl Language for English {
             FailedToLoadThing { thing, path, error } => {
                 format!("Failed to load {}: {}\n{}", thing, path, error)
             }
+            GridderProject { name } => match name {
+                Some(name) => format!("Gridder Project - {}", name),
+                None => "Gridder Project".to_string(),
+            },
         }
     }
 }

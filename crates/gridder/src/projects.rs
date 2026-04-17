@@ -163,6 +163,8 @@ enum ProjectTextGridLifeCycle {
     Error(String),
 }
 
+type ProjectTitleNamePublisher<'a> = egui::cache::FramePublisher<egui::Id, Option<String>>;
+
 impl Project {
     pub fn try_from_preview_from_dropping_files(preview: &ProjectPreview) -> Option<Self> {
         if !preview.is_from_dropping {
@@ -193,6 +195,20 @@ impl Project {
 
     pub fn id(&self) -> uuid::Uuid {
         self.uuid
+    }
+
+    fn egui_id(&self) -> egui::Id {
+        egui::Id::new(self.uuid)
+    }
+
+    fn title_name(&self) -> Option<String> {
+        if let Some(audio_file_path) = &self.audio_path {
+            Some(audio_file_path.display().to_string())
+        } else if let Some(textgrid_file_path) = &self.textgrid_path {
+            Some(textgrid_file_path.display().to_string())
+        } else {
+            None
+        }
     }
 
     fn load_audio(&mut self, path: &PathBuf) {
@@ -262,6 +278,20 @@ impl Project {
         } else {
             self.update_audio();
             self.update_textgrid();
+        }
+
+        let new_title_name = ui.memory_mut(|mem| {
+            let project_title_name_publisher = mem.caches.cache::<ProjectTitleNamePublisher<'_>>();
+            let id = self.egui_id();
+            let last_name = project_title_name_publisher.get(&id).cloned().flatten();
+            let name = self.title_name();
+            project_title_name_publisher.set(id, name.clone());
+            if last_name != name { Some(name) } else { None }
+        });
+        if let Some(new_title_name) = new_title_name {
+            ui.send_viewport_cmd(egui::ViewportCommand::Title(l.tl(&Term::GridderProject {
+                name: new_title_name,
+            })));
         }
 
         egui::Grid::new(ui.next_auto_id()).show(ui, |ui| {

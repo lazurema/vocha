@@ -98,7 +98,8 @@ impl eframe::App for GridderApp {
                 let l10n = self.l10n.clone();
                 ui.ctx().show_viewport_deferred(
                     egui::ViewportId::from_hash_of(project.0),
-                    egui::ViewportBuilder::default(),
+                    egui::ViewportBuilder::default()
+                        .with_title(l10n.tl(&Term::GridderProject { name: None })),
                     move |ui, class| {
                         let mut project = project
                             .1
