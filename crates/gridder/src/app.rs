@@ -54,6 +54,15 @@ impl eframe::App for GridderApp {
                     self.language_selector(ui);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         self.settings(ui);
+
+                        let repo_link = env!("CARGO_PKG_REPOSITORY");
+                        if !repo_link.is_empty() {
+                            if ui.button(egui_phosphor::regular::HOUSE_LINE).clicked() {
+                                ui.ctx().send_cmd(egui::OutputCommand::OpenUrl(
+                                    egui::OpenUrl::new_tab(env!("CARGO_PKG_REPOSITORY")),
+                                ));
+                            }
+                        }
                     })
                 })
             });
