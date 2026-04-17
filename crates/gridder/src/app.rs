@@ -46,20 +46,19 @@ impl GridderApp {
 }
 
 impl eframe::App for GridderApp {
-    fn ui(&mut self, ui: &mut eframe::egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Panel::top("top_bar")
             .frame(egui::Frame::new().inner_margin(4))
             .show_inside(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
-                    ui.visuals_mut().button_frame = false;
                     self.language_selector(ui);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        self.always_on_top_toggle(ui);
+                        self.settings(ui);
                     })
                 })
             });
 
-        eframe::egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             let project_preview = ProjectPreview::extract_from_ui(ui);
 
             ui.with_layout(
@@ -127,7 +126,7 @@ impl eframe::App for GridderApp {
 }
 
 impl GridderApp {
-    fn language_selector(&mut self, ui: &mut eframe::egui::Ui) {
+    fn language_selector(&mut self, ui: &mut egui::Ui) {
         egui::ComboBox::from_id_salt("language_selector")
             .selected_text(format!(
                 "{} {}",
@@ -151,7 +150,18 @@ impl GridderApp {
             });
     }
 
-    fn always_on_top_toggle(&mut self, ui: &mut eframe::egui::Ui) {
+    fn settings(&mut self, ui: &mut egui::Ui) {
+        egui::containers::menu::MenuButton::new(egui_phosphor::regular::GEAR)
+            .config(
+                egui::containers::menu::MenuConfig::new()
+                    .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
+            )
+            .ui(ui, |ui| {
+                self.always_on_top_toggle(ui);
+            });
+    }
+
+    fn always_on_top_toggle(&mut self, ui: &mut egui::Ui) {
         let old = self.is_always_on_top;
         ui.checkbox(
             &mut self.is_always_on_top,
