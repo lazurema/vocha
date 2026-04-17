@@ -30,6 +30,30 @@ struct HoveredOrDroppedFile<'a> {
 }
 
 impl ProjectPreview {
+    /// Unfortunately, `ui.response().contains_pointer()` always returns `false`
+    /// while files are being dragged.
+    /// See: <https://github.com/emilk/egui/issues/4655>
+    ///
+    /// TODO(umajho): Investigate this in `egui`.
+    ///
+    /// As of now (2026/04/14), there is no luck: <https://github.com/rust-windowing/winit/issues/720#issuecomment-1290156438>
+    ///
+    /// A member of `winit` said there: “The cursor position should be
+    /// broadcasted during the drag and drop. It could be that a particular
+    /// platform isn't doing so which could indicate a bug.” If that’s the case,
+    /// then at least both macOS and Windows are affected.
+    pub fn extract_from_ui(ui: &mut egui::Ui) -> Option<ProjectPreview> {
+        if true || ui.response().contains_pointer() {
+            ui.input(|input| {
+                ProjectPreview::try_from_dropped_files(input.raw.dropped_files.iter()).or_else(
+                    || ProjectPreview::try_from_hovered_files(input.raw.hovered_files.iter()),
+                )
+            })
+        } else {
+            None
+        }
+    }
+
     fn try_from_files<'a>(
         files: impl Iterator<Item = HoveredOrDroppedFile<'a>>,
         is_from_dropping: bool,
@@ -225,10 +249,64 @@ impl Project {
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui, l: L10N) {
-        self.update_audio();
-        self.update_textgrid();
+        let preview = ProjectPreview::extract_from_ui(ui);
+        if let Some(preview) = &preview
+            && preview.is_from_dropping
+        {
+            if let Some(audio_file_path) = &preview.audio_file_path {
+                self.load_audio(audio_file_path);
+            }
+            if let Some(textgrid_file_path) = &preview.textgrid_file_path {
+                self.load_textgrid(textgrid_file_path);
+            }
+        } else {
+            self.update_audio();
+            self.update_textgrid();
+        }
 
-        ui.label("TODO");
+        egui::Grid::new(ui.next_auto_id()).show(ui, |ui| {
+            fn preview_label(ui: &mut egui::Ui, path: &PathBuf, has_already_loaded: bool) {
+                if has_already_loaded {
+                    ui.label(format!("<will load as replacement>: {}", path.display()));
+                } else {
+                    ui.label(format!("<will load>: {}", path.display()));
+                }
+            }
+
+            ui.label("Audio");
+            if let Some(preview) = &preview
+                && let Some(audio_file_path) = &preview.audio_file_path
+            {
+                preview_label(ui, audio_file_path, self.audio_path.is_some());
+            } else if let Some(audio_path) = self.audio_path.clone() {
+                ui.horizontal(|ui| {
+                    if ui.button(egui_phosphor::regular::X).clicked() {
+                        self.clear_audio();
+                    }
+                    ui.label(audio_path.display().to_string());
+                });
+            } else {
+                ui.label("<absent>");
+            }
+            ui.end_row();
+
+            ui.label("TextGrid");
+            if let Some(preview) = &preview
+                && let Some(textgrid_file_path) = &preview.textgrid_file_path
+            {
+                preview_label(ui, textgrid_file_path, self.textgrid_path.is_some());
+            } else if let Some(textgrid_path) = self.textgrid_path.clone() {
+                ui.horizontal(|ui| {
+                    if ui.button(egui_phosphor::regular::X).clicked() {
+                        self.clear_textgrid();
+                    }
+                    ui.label(textgrid_path.display().to_string());
+                });
+            } else {
+                ui.label("<absent>");
+            }
+            ui.end_row();
+        });
 
         match self.audio {
             ProjectAudioLifeCycle::Absent => {}
@@ -275,6 +353,16 @@ impl Project {
                 }));
             }
         }
+    }
+
+    fn clear_audio(&mut self) {
+        self.audio_path = None;
+        self.audio = ProjectAudioLifeCycle::Absent;
+    }
+
+    fn clear_textgrid(&mut self) {
+        self.textgrid_path = None;
+        self.textgrid = ProjectTextGridLifeCycle::Absent;
     }
 
     fn update_audio(&mut self) {

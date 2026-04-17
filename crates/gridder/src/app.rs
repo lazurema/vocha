@@ -60,34 +60,7 @@ impl eframe::App for GridderApp {
             });
 
         eframe::egui::CentralPanel::default().show_inside(ui, |ui| {
-            /// Unfortunately, `ui.response().contains_pointer()` always returns
-            ///  `false` while files are being dragged.
-            /// See: <https://github.com/emilk/egui/issues/4655>
-            ///
-            /// TODO(umajho): Investigate this in `egui`.
-            ///
-            /// As of now (2026/04/14), there is no luck: <https://github.com/rust-windowing/winit/issues/720#issuecomment-1290156438>
-            ///
-            /// A member of `winit` said there: “The cursor position should be
-            /// broadcasted during the drag and drop. It could be that a
-            /// particular platform isn't doing so which could indicate a bug.”
-            /// If that’s the case, then at least both macOS and Windows are
-            /// affected.
-            fn get_project_preview(ui: &mut egui::Ui) -> Option<ProjectPreview> {
-                if true || ui.response().contains_pointer() {
-                    ui.input(|input| {
-                        ProjectPreview::try_from_dropped_files(input.raw.dropped_files.iter())
-                            .or_else(|| {
-                                ProjectPreview::try_from_hovered_files(
-                                    input.raw.hovered_files.iter(),
-                                )
-                            })
-                    })
-                } else {
-                    None
-                }
-            }
-            let project_preview = get_project_preview(ui);
+            let project_preview = ProjectPreview::extract_from_ui(ui);
 
             ui.with_layout(
                 egui::Layout::centered_and_justified(egui::Direction::TopDown)
