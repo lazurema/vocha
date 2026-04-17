@@ -8,7 +8,10 @@ use std::{
 
 use eframe::egui::{self, Widget as _};
 
-use gridder_egui_widgets::waveform::{WaveData, Waveform};
+use gridder_egui_widgets::{
+    horizontal_scroll_and_zoom_area::HorizontalScrollAndZoomArea,
+    waveform::{WaveData, Waveform},
+};
 use rodio::Source as _;
 
 use sha2::Digest as _;
@@ -154,6 +157,7 @@ enum ProjectAudioLifeCycle {
     Error(String),
 }
 
+#[derive(Clone)]
 struct ProjectAudio {
     id: egui::Id,
     sample_rate: NonZeroU32,
@@ -194,6 +198,8 @@ impl Project {
             textgrid_path: None,
             textgrid: ProjectTextGridLifeCycle::Absent,
             last_frame_title_name: None,
+            points_per_second: 500.0,
+            offset_points: 0.0,
         }
     }
 
@@ -336,7 +342,7 @@ impl Project {
             ui.end_row();
         });
 
-        match self.audio {
+        match &self.audio {
             ProjectAudioLifeCycle::Absent => {}
             ProjectAudioLifeCycle::Loading(_) => {
                 ui.horizontal(|ui| {
@@ -347,10 +353,10 @@ impl Project {
                     }));
                 });
             }
-            ProjectAudioLifeCycle::Loaded(ref audio) => {
-                self.waveforms_ui(ui, audio);
+            ProjectAudioLifeCycle::Loaded(audio) => {
+                self.waveforms_ui(ui, &audio.clone());
             }
-            ProjectAudioLifeCycle::Error(ref e) => {
+            ProjectAudioLifeCycle::Error(e) => {
                 ui.label(l.tl(&Term::FailedToLoadThing {
                     thing: "audio",
                     path: self.audio_path.as_ref().unwrap().display().to_string(),
@@ -443,10 +449,8 @@ impl Project {
         }
     }
 
-    fn waveforms_ui(&self, ui: &mut egui::Ui, audio: &ProjectAudio) {
+    fn waveforms_ui(&mut self, ui: &mut egui::Ui, audio: &ProjectAudio) {
         const TMP_HEIGHT: f32 = 200.0;
-        const TMP_POINTS_PER_SECOND: f32 = 500.0;
-        const TMP_OFFSET_POINTS: f32 = 0.0;
 
         let wave_data = Arc::new(WaveData {
             id: audio.id,
@@ -455,13 +459,24 @@ impl Project {
             samples_interleaved: audio.samples_interleaved.clone(),
         });
 
-        for channel in 0..audio.channels.get() {
-            let desired_size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
+        let size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
 
-            Waveform::new(desired_size, wave_data.clone(), channel)
-                .points_per_second(TMP_POINTS_PER_SECOND)
-                .offset_points(TMP_OFFSET_POINTS)
-                .ui(ui);
+        for channel in 0..audio.channels.get() {
+            let max_seconds_in_view = (wave_data.samples_interleaved.len()
+                / wave_data.channels.get() as usize) as f32
+                / wave_data.sample_rate.get() as f32;
+
+            HorizontalScrollAndZoomArea::new(
+                &mut self.points_per_second,
+                &mut self.offset_points,
+                max_seconds_in_view,
+            )
+            .show(ui, |ui, points_per_second, offset_points| {
+                Waveform::new(size, wave_data.clone(), channel)
+                    .points_per_second(points_per_second)
+                    .offset_points(offset_points)
+                    .ui(ui)
+            });
         }
     }
 }

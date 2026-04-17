@@ -7,7 +7,7 @@ use std::{
 use egui::epaint;
 
 pub struct Waveform {
-    desired_size: egui::Vec2,
+    size: egui::Vec2,
     /// The number of points (logical pixels) to display per second of audio.
     points_per_second: f32,
     /// The horizontal offset of the waveform in points.
@@ -55,9 +55,9 @@ pub struct WaveData {
 }
 
 fn default_paint_mode_selector(samples_per_pixel: f32) -> WaveformPaintMode {
-    if samples_per_pixel <= 1.0 {
+    if samples_per_pixel <= 0.5 {
         WaveformPaintMode::Line
-    } else if samples_per_pixel <= 10.0 {
+    } else if samples_per_pixel <= 2.0 {
         WaveformPaintMode::Bar
     } else {
         WaveformPaintMode::BarSymmetric
@@ -65,9 +65,9 @@ fn default_paint_mode_selector(samples_per_pixel: f32) -> WaveformPaintMode {
 }
 
 impl Waveform {
-    pub fn new(desired_size: egui::Vec2, data: Arc<WaveData>, channel: u16) -> Self {
+    pub fn new(size: egui::Vec2, data: Arc<WaveData>, channel: u16) -> Self {
         Self {
-            desired_size,
+            size,
             points_per_second: 100.0,
             offset_points: 0.0,
             paint_mode_selector: Box::new(default_paint_mode_selector),
@@ -109,7 +109,7 @@ impl Waveform {
 
 impl egui::Widget for Waveform {
     fn ui(self, ui: &mut egui::Ui) -> egui::Response {
-        let resp = ui.allocate_response(self.desired_size, egui::Sense::empty());
+        let resp = ui.allocate_response(self.size, egui::Sense::empty());
 
         let pixels_per_point = ui.ctx().pixels_per_point();
         let height_pixels = (resp.rect.height() * pixels_per_point).floor() as usize;
