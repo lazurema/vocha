@@ -388,47 +388,73 @@ impl Project {
     }
 
     fn header_pane_ui(&mut self, ui: &mut egui::Ui, preview: &Option<ProjectPreview>) {
+        let full_width = ui.available_width();
+
         egui::Grid::new(ui.next_auto_id()).show(ui, |ui| {
-            fn preview_label(ui: &mut egui::Ui, path: &PathBuf, has_already_loaded: bool) {
-                if has_already_loaded {
-                    ui.label(format!("<will load as replacement>: {}", path.display()));
-                } else {
-                    ui.label(format!("<will load>: {}", path.display()));
-                }
+            fn truncate_label(ui: &mut egui::Ui, str: &str) {
+                egui::Label::new(str)
+                    .wrap_mode(egui::TextWrapMode::Truncate)
+                    .ui(ui);
             }
 
-            ui.label("Audio");
-            if let Some(preview) = preview
-                && let Some(audio_file_path) = &preview.audio_file_path
-            {
-                preview_label(ui, audio_file_path, self.audio_path.is_some());
-            } else if let Some(audio_path) = self.audio_path.clone() {
-                ui.horizontal(|ui| {
-                    if ui.button(egui_phosphor::regular::X).clicked() {
-                        self.clear_audio();
-                    }
-                    ui.label(audio_path.display().to_string());
-                });
-            } else {
-                ui.label("<absent>");
+            fn preview_label(ui: &mut egui::Ui, path: &PathBuf, has_already_loaded: bool) {
+                let text = if has_already_loaded {
+                    format!("<will load as replacement>: {}", path.display())
+                } else {
+                    format!("<will load>: {}", path.display())
+                };
+
+                truncate_label(ui, &text);
             }
+
+            two_cells(
+                ui,
+                full_width,
+                |ui| {
+                    ui.label("Audio").rect.width();
+                },
+                |ui| {
+                    if let Some(preview) = preview
+                        && let Some(audio_file_path) = &preview.audio_file_path
+                    {
+                        preview_label(ui, audio_file_path, self.audio_path.is_some());
+                    } else if let Some(audio_path) = self.audio_path.clone() {
+                        ui.horizontal(|ui| {
+                            if ui.button(egui_phosphor::regular::X).clicked() {
+                                self.clear_audio();
+                            }
+                            truncate_label(ui, &audio_path.display().to_string());
+                        });
+                    } else {
+                        ui.label("<absent>");
+                    }
+                },
+            );
             ui.end_row();
 
-            ui.label("TextGrid");
-            if let Some(preview) = &preview
-                && let Some(textgrid_file_path) = &preview.textgrid_file_path
-            {
-                preview_label(ui, textgrid_file_path, self.textgrid_path.is_some());
-            } else if let Some(textgrid_path) = self.textgrid_path.clone() {
-                ui.horizontal(|ui| {
-                    if ui.button(egui_phosphor::regular::X).clicked() {
-                        self.clear_textgrid();
+            two_cells(
+                ui,
+                full_width,
+                |ui| {
+                    ui.label("TextGrid");
+                },
+                |ui| {
+                    if let Some(preview) = &preview
+                        && let Some(textgrid_file_path) = &preview.textgrid_file_path
+                    {
+                        preview_label(ui, textgrid_file_path, self.textgrid_path.is_some());
+                    } else if let Some(textgrid_path) = self.textgrid_path.clone() {
+                        ui.horizontal(|ui| {
+                            if ui.button(egui_phosphor::regular::X).clicked() {
+                                self.clear_textgrid();
+                            }
+                            truncate_label(ui, &textgrid_path.display().to_string());
+                        });
+                    } else {
+                        ui.label("<absent>");
                     }
-                    ui.label(textgrid_path.display().to_string());
-                });
-            } else {
-                ui.label("<absent>");
-            }
+                },
+            );
             ui.end_row();
         });
     }
@@ -530,4 +556,29 @@ impl Project {
             }
         });
     }
+}
+
+fn two_cells(
+    ui: &mut egui::Ui,
+    full_width: f32,
+    left: impl FnOnce(&mut egui::Ui),
+    right: impl FnOnce(&mut egui::Ui),
+) {
+    let left_width = ui
+        .horizontal(|ui| {
+            left(ui);
+        })
+        .response
+        .rect
+        .width();
+
+    // TODO: find out what this magic number is.
+    const MAGIC: f32 = 16.0;
+
+    let right_width = full_width - left_width - ui.style().spacing.item_spacing.x - MAGIC;
+    egui_extras::StripBuilder::new(ui)
+        .size(egui_extras::Size::exact(right_width))
+        .horizontal(|mut strip| {
+            strip.cell(|ui| right(ui));
+        });
 }
