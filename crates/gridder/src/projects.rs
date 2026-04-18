@@ -10,6 +10,7 @@ use eframe::egui::{self, Widget as _};
 
 use gridder_egui::{
     horizontal_scroll_and_zoom_area::HorizontalScrollAndZoomArea,
+    horzontal_scroll_bar::HorizontalScrollBar,
     waveform::{WaveData, Waveform},
 };
 use rodio::Source as _;
@@ -361,6 +362,10 @@ impl Project {
 
         max_seconds_from_audio.max(max_seconds_from_textgrid)
     }
+
+    fn start_seconds(&self) -> f32 {
+        self.offset_points / self.points_per_second
+    }
 }
 
 impl Project {
@@ -457,6 +462,23 @@ impl Project {
             );
             ui.end_row();
         });
+
+        let mut start_percent = (self.start_seconds() / self.max_seconds()).min(1.0);
+        let old_start_percent = start_percent;
+        let seconds_in_view = ui.available_width() / self.points_per_second;
+        let size_percent = (seconds_in_view / self.max_seconds()).min(1.0);
+
+        HorizontalScrollBar::new(&mut start_percent, size_percent).ui(ui);
+
+        if old_start_percent != start_percent {
+            self.offset_points = start_percent * self.max_seconds() * self.points_per_second;
+            if self.offset_points + seconds_in_view * self.points_per_second
+                > self.max_seconds() * self.points_per_second
+            {
+                self.offset_points = self.max_seconds() * self.points_per_second
+                    - seconds_in_view * self.points_per_second;
+            }
+        }
     }
 
     fn main_pane_ui(&mut self, ui: &mut egui::Ui, l: &L10N) {
