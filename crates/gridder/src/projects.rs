@@ -149,6 +149,8 @@ pub struct Project {
 
     points_per_second: f32,
     offset_points: f32,
+
+    max_seconds: f32,
 }
 
 enum ProjectAudioLifeCycle {
@@ -201,6 +203,7 @@ impl Project {
             last_frame_title_name: None,
             points_per_second: 500.0,
             offset_points: 0.0,
+            max_seconds: 0.0,
         }
     }
 
@@ -295,7 +298,7 @@ impl Project {
         self.textgrid = ProjectTextGridLifeCycle::Absent;
     }
 
-    fn update_audio(&mut self) {
+    fn update_audio(&mut self) -> bool {
         let mut new_audio = None;
         match self.audio {
             ProjectAudioLifeCycle::Loading(ref rx) => {
@@ -317,10 +320,13 @@ impl Project {
         }
         if let Some(new_audio) = new_audio {
             self.audio = new_audio;
+            true
+        } else {
+            false
         }
     }
 
-    fn update_textgrid(&mut self) {
+    fn update_textgrid(&mut self) -> bool {
         let mut new_textgrid = None;
         match self.textgrid {
             ProjectTextGridLifeCycle::Loading(ref rx) => {
@@ -342,34 +348,52 @@ impl Project {
         }
         if let Some(new_textgrid) = new_textgrid {
             self.textgrid = new_textgrid;
+            true
+        } else {
+            false
         }
     }
 
-    fn max_seconds(&self) -> f32 {
-        let max_seconds_from_audio = if let ProjectAudioLifeCycle::Loaded(ref audio) = self.audio {
-            audio.samples_interleaved.len() as f32
-                / audio.channels.get() as f32
-                / audio.sample_rate.get() as f32
-        } else {
-            0.0
-        };
-        let max_seconds_from_textgrid =
-            if let ProjectTextGridLifeCycle::Loaded(ref textgrid) = self.textgrid {
-                textgrid.xmax as f32
-            } else {
-                0.0
-            };
+    fn update_max_seconds(&mut self) {
+        let max_seconds = {
+            let max_seconds_from_audio =
+                if let ProjectAudioLifeCycle::Loaded(ref audio) = self.audio {
+                    audio.samples_interleaved.len() as f32
+                        / audio.channels.get() as f32
+                        / audio.sample_rate.get() as f32
+                } else {
+                    0.0
+                };
+            let max_seconds_from_textgrid =
+                if let ProjectTextGridLifeCycle::Loaded(ref textgrid) = self.textgrid {
+                    textgrid.xmax as f32
+                } else {
+                    0.0
+                };
 
-        max_seconds_from_audio.max(max_seconds_from_textgrid)
+            max_seconds_from_audio.max(max_seconds_from_textgrid)
+        };
+
+        self.max_seconds = max_seconds;
     }
 
     fn start_seconds(&self) -> f32 {
         self.offset_points / self.points_per_second
     }
+
+    fn minimal_points_per_second(&self, total_points: f32) -> f32 {
+        total_points / self.max_seconds
+    }
+
+    fn reset_scroll_and_zoom(&mut self, total_points: f32) {
+        self.points_per_second = self.minimal_points_per_second(total_points);
+    }
 }
 
 impl Project {
     pub fn ui(&mut self, ui: &mut egui::Ui, l: L10N) {
+        let mut is_updated = false;
+
         let preview = ProjectPreview::extract_from_ui(ui);
         if let Some(preview) = &preview
             && preview.is_from_dropping
@@ -381,15 +405,28 @@ impl Project {
                 self.load_textgrid(textgrid_file_path);
             }
         } else {
-            self.update_audio();
-            self.update_textgrid();
+            is_updated |= self.update_audio();
+            is_updated |= self.update_textgrid();
+        }
+
+        // TODO: make it precise.
+        let imprecise_drawer_canvas_width = ui.available_width();
+        if is_updated {
+            self.update_max_seconds();
+            self.reset_scroll_and_zoom(imprecise_drawer_canvas_width);
+        } else if self.points_per_second
+            < self.minimal_points_per_second(imprecise_drawer_canvas_width)
+        {
+            self.reset_scroll_and_zoom(imprecise_drawer_canvas_width);
         }
 
         self.update_title_name(ui, &l);
 
         self.header_pane_ui(ui, &preview);
 
-        self.main_pane_ui(ui, &l);
+        if self.max_seconds != 0.0 {
+            self.main_pane_ui(ui, &l);
+        }
     }
 
     fn header_pane_ui(&mut self, ui: &mut egui::Ui, preview: &Option<ProjectPreview>) {
@@ -463,19 +500,25 @@ impl Project {
             ui.end_row();
         });
 
-        let mut start_percent = (self.start_seconds() / self.max_seconds()).min(1.0);
+        if self.max_seconds != 0.0 {
+            self.scroll_bar_ui(ui);
+        }
+    }
+
+    fn scroll_bar_ui(&mut self, ui: &mut egui::Ui) {
+        let mut start_percent = (self.start_seconds() / self.max_seconds).min(1.0);
         let old_start_percent = start_percent;
         let seconds_in_view = ui.available_width() / self.points_per_second;
-        let size_percent = (seconds_in_view / self.max_seconds()).min(1.0);
+        let size_percent = (seconds_in_view / self.max_seconds).min(1.0);
 
         HorizontalScrollBar::new(&mut start_percent, size_percent).ui(ui);
 
         if old_start_percent != start_percent {
-            self.offset_points = start_percent * self.max_seconds() * self.points_per_second;
+            self.offset_points = start_percent * self.max_seconds * self.points_per_second;
             if self.offset_points + seconds_in_view * self.points_per_second
-                > self.max_seconds() * self.points_per_second
+                > self.max_seconds * self.points_per_second
             {
-                self.offset_points = self.max_seconds() * self.points_per_second
+                self.offset_points = self.max_seconds * self.points_per_second
                     - seconds_in_view * self.points_per_second;
             }
         }
@@ -544,7 +587,7 @@ impl Project {
         });
 
         let size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
-        let max_seconds = self.max_seconds();
+        let max_seconds = self.max_seconds;
 
         ui.scope(|ui| {
             ui.style_mut().spacing.item_spacing.y = -1.0;
