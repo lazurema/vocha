@@ -217,6 +217,20 @@ impl Project {
         }
     }
 
+    fn update_title_name(&mut self, ui: &mut egui::Ui, l: &L10N) {
+        let new_title_name = self.title_name();
+        if self
+            .last_frame_title_name
+            .as_ref()
+            .is_none_or(|old_title_name| old_title_name != &new_title_name)
+        {
+            ui.send_viewport_cmd(egui::ViewportCommand::Title(l.tl(&Term::GridderProject {
+                name: new_title_name.clone(),
+            })));
+            self.last_frame_title_name = Some(new_title_name);
+        }
+    }
+
     fn load_audio(&mut self, path: &PathBuf) {
         let (tx, rx) = mpsc::channel();
         self.audio_path = Some(path.clone());
@@ -268,125 +282,6 @@ impl Project {
                 tx.send(loaded_data).ok();
             }
         });
-    }
-
-    pub fn ui(&mut self, ui: &mut egui::Ui, l: L10N) {
-        let preview = ProjectPreview::extract_from_ui(ui);
-        if let Some(preview) = &preview
-            && preview.is_from_dropping
-        {
-            if let Some(audio_file_path) = &preview.audio_file_path {
-                self.load_audio(audio_file_path);
-            }
-            if let Some(textgrid_file_path) = &preview.textgrid_file_path {
-                self.load_textgrid(textgrid_file_path);
-            }
-        } else {
-            self.update_audio();
-            self.update_textgrid();
-        }
-
-        let new_title_name = self.title_name();
-        if self
-            .last_frame_title_name
-            .as_ref()
-            .is_none_or(|old_title_name| old_title_name != &new_title_name)
-        {
-            ui.send_viewport_cmd(egui::ViewportCommand::Title(l.tl(&Term::GridderProject {
-                name: new_title_name.clone(),
-            })));
-            self.last_frame_title_name = Some(new_title_name);
-        }
-
-        egui::Grid::new(ui.next_auto_id()).show(ui, |ui| {
-            fn preview_label(ui: &mut egui::Ui, path: &PathBuf, has_already_loaded: bool) {
-                if has_already_loaded {
-                    ui.label(format!("<will load as replacement>: {}", path.display()));
-                } else {
-                    ui.label(format!("<will load>: {}", path.display()));
-                }
-            }
-
-            ui.label("Audio");
-            if let Some(preview) = &preview
-                && let Some(audio_file_path) = &preview.audio_file_path
-            {
-                preview_label(ui, audio_file_path, self.audio_path.is_some());
-            } else if let Some(audio_path) = self.audio_path.clone() {
-                ui.horizontal(|ui| {
-                    if ui.button(egui_phosphor::regular::X).clicked() {
-                        self.clear_audio();
-                    }
-                    ui.label(audio_path.display().to_string());
-                });
-            } else {
-                ui.label("<absent>");
-            }
-            ui.end_row();
-
-            ui.label("TextGrid");
-            if let Some(preview) = &preview
-                && let Some(textgrid_file_path) = &preview.textgrid_file_path
-            {
-                preview_label(ui, textgrid_file_path, self.textgrid_path.is_some());
-            } else if let Some(textgrid_path) = self.textgrid_path.clone() {
-                ui.horizontal(|ui| {
-                    if ui.button(egui_phosphor::regular::X).clicked() {
-                        self.clear_textgrid();
-                    }
-                    ui.label(textgrid_path.display().to_string());
-                });
-            } else {
-                ui.label("<absent>");
-            }
-            ui.end_row();
-        });
-
-        match &self.audio {
-            ProjectAudioLifeCycle::Absent => {}
-            ProjectAudioLifeCycle::Loading(_) => {
-                ui.horizontal(|ui| {
-                    ui.spinner();
-                    ui.label(l.tl(&Term::LoadingThing {
-                        thing: "audio",
-                        path: self.audio_path.as_ref().unwrap().display().to_string(),
-                    }));
-                });
-            }
-            ProjectAudioLifeCycle::Loaded(audio) => {
-                self.waveforms_ui(ui, &audio.clone());
-            }
-            ProjectAudioLifeCycle::Error(e) => {
-                ui.label(l.tl(&Term::FailedToLoadThing {
-                    thing: "audio",
-                    path: self.audio_path.as_ref().unwrap().display().to_string(),
-                    error: e.clone(),
-                }));
-            }
-        }
-
-        match self.textgrid {
-            ProjectTextGridLifeCycle::Absent => {}
-            ProjectTextGridLifeCycle::Loading(_) => {
-                ui.horizontal(|ui| {
-                    ui.spinner();
-                    ui.label(l.tl(&Term::LoadingThing {
-                        thing: "TextGrid",
-                        path: self.textgrid_path.as_ref().unwrap().display().to_string(),
-                    }));
-                });
-            }
-            ProjectTextGridLifeCycle::Loaded(_) => {
-                ui.label("TODO: TextGrid loaded.");
-            }
-            ProjectTextGridLifeCycle::Error(ref e) => {
-                ui.label(l.tl(&Term::FailedToLoadThing {
-                    thing: "TextGrid",
-                    path: self.textgrid_path.as_ref().unwrap().display().to_string(),
-                    error: e.clone(),
-                }));
-            }
-        }
     }
 
     fn clear_audio(&mut self) {
@@ -446,6 +341,125 @@ impl Project {
         }
         if let Some(new_textgrid) = new_textgrid {
             self.textgrid = new_textgrid;
+        }
+    }
+}
+
+impl Project {
+    pub fn ui(&mut self, ui: &mut egui::Ui, l: L10N) {
+        let preview = ProjectPreview::extract_from_ui(ui);
+        if let Some(preview) = &preview
+            && preview.is_from_dropping
+        {
+            if let Some(audio_file_path) = &preview.audio_file_path {
+                self.load_audio(audio_file_path);
+            }
+            if let Some(textgrid_file_path) = &preview.textgrid_file_path {
+                self.load_textgrid(textgrid_file_path);
+            }
+        } else {
+            self.update_audio();
+            self.update_textgrid();
+        }
+
+        self.update_title_name(ui, &l);
+
+        self.header_pane_ui(ui, &preview);
+
+        self.main_pane_ui(ui, &l);
+    }
+
+    fn header_pane_ui(&mut self, ui: &mut egui::Ui, preview: &Option<ProjectPreview>) {
+        egui::Grid::new(ui.next_auto_id()).show(ui, |ui| {
+            fn preview_label(ui: &mut egui::Ui, path: &PathBuf, has_already_loaded: bool) {
+                if has_already_loaded {
+                    ui.label(format!("<will load as replacement>: {}", path.display()));
+                } else {
+                    ui.label(format!("<will load>: {}", path.display()));
+                }
+            }
+
+            ui.label("Audio");
+            if let Some(preview) = preview
+                && let Some(audio_file_path) = &preview.audio_file_path
+            {
+                preview_label(ui, audio_file_path, self.audio_path.is_some());
+            } else if let Some(audio_path) = self.audio_path.clone() {
+                ui.horizontal(|ui| {
+                    if ui.button(egui_phosphor::regular::X).clicked() {
+                        self.clear_audio();
+                    }
+                    ui.label(audio_path.display().to_string());
+                });
+            } else {
+                ui.label("<absent>");
+            }
+            ui.end_row();
+
+            ui.label("TextGrid");
+            if let Some(preview) = &preview
+                && let Some(textgrid_file_path) = &preview.textgrid_file_path
+            {
+                preview_label(ui, textgrid_file_path, self.textgrid_path.is_some());
+            } else if let Some(textgrid_path) = self.textgrid_path.clone() {
+                ui.horizontal(|ui| {
+                    if ui.button(egui_phosphor::regular::X).clicked() {
+                        self.clear_textgrid();
+                    }
+                    ui.label(textgrid_path.display().to_string());
+                });
+            } else {
+                ui.label("<absent>");
+            }
+            ui.end_row();
+        });
+    }
+
+    fn main_pane_ui(&mut self, ui: &mut egui::Ui, l: &L10N) {
+        match &self.audio {
+            ProjectAudioLifeCycle::Absent => {}
+            ProjectAudioLifeCycle::Loading(_) => {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label(l.tl(&Term::LoadingThing {
+                        thing: "audio",
+                        path: self.audio_path.as_ref().unwrap().display().to_string(),
+                    }));
+                });
+            }
+            ProjectAudioLifeCycle::Loaded(audio) => {
+                self.waveforms_ui(ui, &audio.clone());
+            }
+            ProjectAudioLifeCycle::Error(e) => {
+                ui.label(l.tl(&Term::FailedToLoadThing {
+                    thing: "audio",
+                    path: self.audio_path.as_ref().unwrap().display().to_string(),
+                    error: e.clone(),
+                }));
+            }
+        }
+
+        match self.textgrid {
+            ProjectTextGridLifeCycle::Absent => {}
+            ProjectTextGridLifeCycle::Loading(_) => {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label(l.tl(&Term::LoadingThing {
+                        thing: "TextGrid",
+                        path: self.textgrid_path.as_ref().unwrap().display().to_string(),
+                    }));
+                });
+            }
+            ProjectTextGridLifeCycle::Loaded(_) => {
+                ui.label("TODO: TextGrid loaded.");
+            }
+            ProjectTextGridLifeCycle::Error(ref e) => {
+                ui.label(l.tl(&Term::FailedToLoadThing {
+                    thing: "TextGrid",
+                    path: self.textgrid_path.as_ref().unwrap().display().to_string(),
+                    error: e.clone(),
+                }));
+            }
         }
     }
 

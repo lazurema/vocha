@@ -114,7 +114,10 @@ impl eframe::App for GridderApp {
                             .lock()
                             .expect("Failed to acquire lock on project.");
                         if class == egui::ViewportClass::EmbeddedWindow {
-                            project.ui(ui, l10n.clone());
+                            // currently, the project UI is based on the
+                            // assumption that it has its own viewport.
+                            unimplemented!("Embedded viewports are not supported yet.");
+                            // project.ui(ui, l10n.clone());
                         } else {
                             egui::CentralPanel::default().show_inside(ui, |ui| {
                                 project.ui(ui, l10n.clone());
