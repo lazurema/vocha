@@ -450,7 +450,7 @@ impl Project {
     }
 
     fn waveforms_ui(&mut self, ui: &mut egui::Ui, audio: &ProjectAudio) {
-        const TMP_HEIGHT: f32 = 200.0;
+        const TMP_HEIGHT: f32 = 100.0;
 
         let wave_data = Arc::new(WaveData {
             id: audio.id,
@@ -461,22 +461,41 @@ impl Project {
 
         let size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
 
-        for channel in 0..audio.channels.get() {
-            let max_seconds_in_view = (wave_data.samples_interleaved.len()
-                / wave_data.channels.get() as usize) as f32
-                / wave_data.sample_rate.get() as f32;
+        ui.scope(|ui| {
+            ui.style_mut().spacing.item_spacing.y = -1.0;
 
-            HorizontalScrollAndZoomArea::new(
-                &mut self.points_per_second,
-                &mut self.offset_points,
-                max_seconds_in_view,
-            )
-            .show(ui, |ui, points_per_second, offset_points| {
-                Waveform::new(size, wave_data.clone(), channel)
-                    .points_per_second(points_per_second)
-                    .offset_points(offset_points)
-                    .ui(ui)
-            });
-        }
+            for channel in 0..audio.channels.get() {
+                let max_seconds_in_view = (wave_data.samples_interleaved.len()
+                    / wave_data.channels.get() as usize)
+                    as f32
+                    / wave_data.sample_rate.get() as f32;
+
+                egui::Frame::new()
+                    .fill(ui.visuals().extreme_bg_color)
+                    .stroke(egui::Stroke::new(
+                        1.0,
+                        match ui.theme() {
+                            egui::Theme::Dark => egui::Color32::WHITE,
+                            egui::Theme::Light => egui::Color32::BLACK,
+                        },
+                    ))
+                    .show(ui, |ui| {
+                        HorizontalScrollAndZoomArea::new(
+                            &mut self.points_per_second,
+                            &mut self.offset_points,
+                            max_seconds_in_view,
+                        )
+                        .show(
+                            ui,
+                            |ui, points_per_second, offset_points| {
+                                Waveform::new(size, wave_data.clone(), channel)
+                                    .points_per_second(points_per_second)
+                                    .offset_points(offset_points)
+                                    .ui(ui)
+                            },
+                        );
+                    });
+            }
+        });
     }
 }
