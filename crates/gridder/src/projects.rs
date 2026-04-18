@@ -416,51 +416,55 @@ impl Project {
     }
 
     fn main_pane_ui(&mut self, ui: &mut egui::Ui, l: &L10N) {
-        match &self.audio {
-            ProjectAudioLifeCycle::Absent => {}
-            ProjectAudioLifeCycle::Loading(_) => {
-                ui.horizontal(|ui| {
-                    ui.spinner();
-                    ui.label(l.tl(&Term::LoadingThing {
+        ui.style_mut().spacing.scroll = egui::style::ScrollStyle::solid();
+
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            match &self.audio {
+                ProjectAudioLifeCycle::Absent => {}
+                ProjectAudioLifeCycle::Loading(_) => {
+                    ui.horizontal(|ui| {
+                        ui.spinner();
+                        ui.label(l.tl(&Term::LoadingThing {
+                            thing: "audio",
+                            path: self.audio_path.as_ref().unwrap().display().to_string(),
+                        }));
+                    });
+                }
+                ProjectAudioLifeCycle::Loaded(audio) => {
+                    self.waveforms_ui(ui, &audio.clone());
+                }
+                ProjectAudioLifeCycle::Error(e) => {
+                    ui.label(l.tl(&Term::FailedToLoadThing {
                         thing: "audio",
                         path: self.audio_path.as_ref().unwrap().display().to_string(),
+                        error: e.clone(),
                     }));
-                });
+                }
             }
-            ProjectAudioLifeCycle::Loaded(audio) => {
-                self.waveforms_ui(ui, &audio.clone());
-            }
-            ProjectAudioLifeCycle::Error(e) => {
-                ui.label(l.tl(&Term::FailedToLoadThing {
-                    thing: "audio",
-                    path: self.audio_path.as_ref().unwrap().display().to_string(),
-                    error: e.clone(),
-                }));
-            }
-        }
 
-        match self.textgrid {
-            ProjectTextGridLifeCycle::Absent => {}
-            ProjectTextGridLifeCycle::Loading(_) => {
-                ui.horizontal(|ui| {
-                    ui.spinner();
-                    ui.label(l.tl(&Term::LoadingThing {
+            match self.textgrid {
+                ProjectTextGridLifeCycle::Absent => {}
+                ProjectTextGridLifeCycle::Loading(_) => {
+                    ui.horizontal(|ui| {
+                        ui.spinner();
+                        ui.label(l.tl(&Term::LoadingThing {
+                            thing: "TextGrid",
+                            path: self.textgrid_path.as_ref().unwrap().display().to_string(),
+                        }));
+                    });
+                }
+                ProjectTextGridLifeCycle::Loaded(_) => {
+                    ui.label("TODO: TextGrid loaded.");
+                }
+                ProjectTextGridLifeCycle::Error(ref e) => {
+                    ui.label(l.tl(&Term::FailedToLoadThing {
                         thing: "TextGrid",
                         path: self.textgrid_path.as_ref().unwrap().display().to_string(),
+                        error: e.clone(),
                     }));
-                });
+                }
             }
-            ProjectTextGridLifeCycle::Loaded(_) => {
-                ui.label("TODO: TextGrid loaded.");
-            }
-            ProjectTextGridLifeCycle::Error(ref e) => {
-                ui.label(l.tl(&Term::FailedToLoadThing {
-                    thing: "TextGrid",
-                    path: self.textgrid_path.as_ref().unwrap().display().to_string(),
-                    error: e.clone(),
-                }));
-            }
-        }
+        });
     }
 
     fn waveforms_ui(&mut self, ui: &mut egui::Ui, audio: &ProjectAudio) {
