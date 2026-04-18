@@ -343,6 +343,24 @@ impl Project {
             self.textgrid = new_textgrid;
         }
     }
+
+    fn max_seconds(&self) -> f32 {
+        let max_seconds_from_audio = if let ProjectAudioLifeCycle::Loaded(ref audio) = self.audio {
+            audio.samples_interleaved.len() as f32
+                / audio.channels.get() as f32
+                / audio.sample_rate.get() as f32
+        } else {
+            0.0
+        };
+        let max_seconds_from_textgrid =
+            if let ProjectTextGridLifeCycle::Loaded(ref textgrid) = self.textgrid {
+                textgrid.xmax as f32
+            } else {
+                0.0
+            };
+
+        max_seconds_from_audio.max(max_seconds_from_textgrid)
+    }
 }
 
 impl Project {
@@ -478,16 +496,12 @@ impl Project {
         });
 
         let size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
+        let max_seconds = self.max_seconds();
 
         ui.scope(|ui| {
             ui.style_mut().spacing.item_spacing.y = -1.0;
 
             for channel in 0..audio.channels.get() {
-                let max_seconds_in_view = (wave_data.samples_interleaved.len()
-                    / wave_data.channels.get() as usize)
-                    as f32
-                    / wave_data.sample_rate.get() as f32;
-
                 egui::Frame::new()
                     .fill(ui.visuals().extreme_bg_color)
                     .stroke(egui::Stroke::new(
@@ -501,7 +515,7 @@ impl Project {
                         HorizontalScrollAndZoomArea::new(
                             &mut self.points_per_second,
                             &mut self.offset_points,
-                            max_seconds_in_view,
+                            max_seconds,
                         )
                         .show(
                             ui,
