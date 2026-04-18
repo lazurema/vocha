@@ -8,7 +8,7 @@ use std::{
 
 use eframe::egui::{self, Widget as _};
 
-use gridder_egui_widgets::{
+use gridder_egui::{
     horizontal_scroll_and_zoom_area::HorizontalScrollAndZoomArea,
     waveform::{WaveData, Waveform},
 };

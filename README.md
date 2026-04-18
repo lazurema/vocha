@@ -15,7 +15,7 @@ A Rust library for working with Praat TextGrid files, supporting:
 
 A GUI tool for visualizing and editing TextGrid files, built with egui.
 
-### Library: [`gridder-egui-widgets`](./crates/gridder-egui-widgets)
+### Library: [`gridder-egui`](./crates/gridder-egui)
 
 A Rust library providing reusable egui widgets used by `gridder` that can also
 be used independently.

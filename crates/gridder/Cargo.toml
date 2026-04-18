@@ -6,7 +6,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-gridder-egui-widgets.workspace = true
+gridder-egui.workspace = true
 textgrid-rs.workspace = true
 
 eframe = { workspace = true, default-features = false, features = [

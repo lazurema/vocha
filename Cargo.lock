@@ -1506,7 +1506,7 @@ dependencies = [
  "eframe",
  "egui-phosphor",
  "font-kit",
- "gridder-egui-widgets",
+ "gridder-egui",
  "objc2-foundation 0.3.2",
  "rodio",
  "sha2",
@@ -1519,7 +1519,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gridder-egui-widgets"
+name = "gridder-egui"
 version = "0.1.0"
 dependencies = [
  "egui",
