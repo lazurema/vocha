@@ -24,21 +24,47 @@ pub struct Waveform {
 
 type DrawerPublisher<'a> = egui::cache::FramePublisher<egui::Id, Arc<Mutex<DrawerWithCache>>>;
 
+/// Specifies how waveform samples are rasterized into pixels.
+///
+/// Each variant defines a rendering strategy suited to different zoom levels
+/// and sample densities.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WaveformPaintMode {
-    /// A line connecting all sample points. When a sample spans multiple pixels,
-    /// it's drawn as a horizontal line segment.
-    Line,
-    /// A filled area showing all samples extending from the center axis,
-    /// with no mirroring.
+    /// Renders each sample as a single pixel at its exact amplitude.
+    ///
+    /// No interpolation is performed between samples.
+    ///
+    /// At low zoom (many pixels per sample), falls back to [`Self::Bar`].
+    LinePoint,
+
+    /// Renders samples as a step function (zero-order hold).
+    ///
+    /// The previous value is held horizontally, with vertical transitions at
+    /// sample boundaries.
+    ///
+    /// At low zoom (many pixels per sample), falls back to [`Self::Bar`].
+    LineStep,
+
+    /// Draws vertical bars from the center axis to the sample value.
+    ///
+    /// Positive values extend upward, negative values downward, preserving
+    /// polarity.
     Bar,
-    /// A filled area showing samples extending from the center axis in both
-    /// directions, mirrored symmetrically.
-    BarSymmetric,
-    /// A filled area showing absolute values of samples above the center axis.
-    BarAbsolutePositive,
-    /// A filled area showing absolute values of samples below the center axis.
-    BarAbsoluteNegative,
+
+    /// Draws vertical bars mirrored about the center axis.
+    ///
+    /// Uses the absolute value of each sample; polarity is ignored.
+    BarMirrored,
+
+    /// Draws vertical bars upward from the center axis using absolute values.
+    ///
+    /// Useful for layered rendering (e.g., stereo channels).
+    BarAbsoluteUp,
+
+    /// Draws vertical bars downward from the center axis using absolute values.
+    ///
+    /// Useful for layered rendering (e.g., stereo channels).
+    BarAbsoluteDown,
 }
 
 pub struct WaveData {
@@ -56,11 +82,11 @@ pub struct WaveData {
 
 fn default_paint_mode_selector(samples_per_pixel: f32) -> WaveformPaintMode {
     if samples_per_pixel <= 0.5 {
-        WaveformPaintMode::Line
+        WaveformPaintMode::LineStep
     } else if samples_per_pixel <= 2.0 {
         WaveformPaintMode::Bar
     } else {
-        WaveformPaintMode::BarSymmetric
+        WaveformPaintMode::BarMirrored
     }
 }
 
@@ -366,18 +392,31 @@ impl DrawerWithCache {
             [MAX_TEXTURE_WIDTH, self.height_pixels()],
             egui::Color32::TRANSPARENT,
         );
-        let drawer = self.value_drawer();
+        let drawer = Self::value_drawer(self.mode);
 
+        let mut last_sample: Option<f32> = None;
         for i in 0..MAX_TEXTURE_WIDTH {
             let sample_index = (((texture_index * MAX_TEXTURE_WIDTH + i) as f32
                 * self.samples_per_pixel)
                 .round() as usize)
                 * self.data.channels.get() as usize
                 + self.channel as usize;
-            let Some(sample) = self.data.samples_interleaved.get(sample_index) else {
+            let Some(&sample) = self.data.samples_interleaved.get(sample_index) else {
                 continue;
             };
-            (drawer)(&mut image, i, *sample, self.side_height_pixels);
+            if matches!(self.mode, WaveformPaintMode::LineStep)
+                && last_sample.is_some_and(|last_sample| last_sample != sample)
+            {
+                let value_current = sample.clamp(-1.0, 1.0);
+                let value_last = last_sample.unwrap().clamp(-1.0, 1.0);
+                let center_y = self.side_height_pixels;
+                let y_current = (center_y as f32 * (1.0 - value_current)).round() as usize;
+                let y_last = (center_y as f32 * (1.0 - value_last)).round() as usize;
+                draw_verticle_line(&mut image, i, y_current.min(y_last), y_current.max(y_last));
+            } else {
+                (drawer)(&mut image, i, sample, self.side_height_pixels);
+            }
+            last_sample = Some(sample);
         }
 
         image
@@ -388,7 +427,10 @@ impl DrawerWithCache {
             [MAX_TEXTURE_WIDTH, self.height_pixels()],
             egui::Color32::TRANSPARENT,
         );
-        let drawer = self.value_drawer();
+        let drawer = Self::value_drawer(match self.mode {
+            WaveformPaintMode::LinePoint | WaveformPaintMode::LineStep => WaveformPaintMode::Bar,
+            other => other,
+        });
 
         for i in 0..MAX_TEXTURE_WIDTH {
             let start_sample_index = ((texture_index * MAX_TEXTURE_WIDTH + i) as f32
@@ -427,7 +469,9 @@ impl DrawerWithCache {
         image
     }
 
-    fn value_drawer(&self) -> impl Fn(&mut egui::ColorImage, usize, f32, usize) + '_ {
+    fn value_drawer<'a>(
+        mode: WaveformPaintMode,
+    ) -> impl Fn(&mut egui::ColorImage, usize, f32, usize) + 'a {
         fn draw_in_line_mode(
             image: &mut egui::ColorImage,
             x: usize,
@@ -448,13 +492,9 @@ impl DrawerWithCache {
             let center_y = side_height_pixels;
             let value_y = (side_height_pixels as f32 * value.abs()).round() as usize;
             if value >= 0.0 {
-                for y in (center_y - value_y)..center_y {
-                    image[(x, y)] = egui::Color32::WHITE;
-                }
+                draw_verticle_line(image, x, center_y - value_y, center_y);
             } else {
-                for y in center_y..(center_y + value_y) {
-                    image[(x, y)] = egui::Color32::WHITE;
-                }
+                draw_verticle_line(image, x, center_y, center_y + value_y);
             }
         }
         fn draw_in_bar_symmetric_mode(
@@ -466,9 +506,7 @@ impl DrawerWithCache {
             let value = value.clamp(-1.0, 1.0);
             let center_y = side_height_pixels;
             let value_y = (side_height_pixels as f32 * value.abs()).round() as usize;
-            for y in (center_y - value_y)..(center_y + value_y) {
-                image[(x, y)] = egui::Color32::WHITE;
-            }
+            draw_verticle_line(image, x, center_y - value_y, center_y + value_y);
         }
         fn draw_in_bar_absolute_positive_mode(
             image: &mut egui::ColorImage,
@@ -479,9 +517,7 @@ impl DrawerWithCache {
             let value = value.clamp(-1.0, 1.0);
             let center_y = side_height_pixels;
             let value_y = (side_height_pixels as f32 * value.abs()).round() as usize;
-            for y in (center_y - value_y)..center_y {
-                image[(x, y)] = egui::Color32::WHITE;
-            }
+            draw_verticle_line(image, x, center_y - value_y, center_y);
         }
         fn draw_in_bar_absolute_negative_mode(
             image: &mut egui::ColorImage,
@@ -492,17 +528,15 @@ impl DrawerWithCache {
             let value = value.clamp(-1.0, 1.0);
             let center_y = side_height_pixels;
             let value_y = (side_height_pixels as f32 * value.abs()).round() as usize;
-            for y in center_y..(center_y + value_y) {
-                image[(x, y)] = egui::Color32::WHITE;
-            }
+            draw_verticle_line(image, x, center_y, center_y + value_y);
         }
 
-        match self.mode {
-            WaveformPaintMode::Line => draw_in_line_mode,
+        match mode {
+            WaveformPaintMode::LinePoint | WaveformPaintMode::LineStep => draw_in_line_mode,
             WaveformPaintMode::Bar => draw_in_bar_mode,
-            WaveformPaintMode::BarSymmetric => draw_in_bar_symmetric_mode,
-            WaveformPaintMode::BarAbsolutePositive => draw_in_bar_absolute_positive_mode,
-            WaveformPaintMode::BarAbsoluteNegative => draw_in_bar_absolute_negative_mode,
+            WaveformPaintMode::BarMirrored => draw_in_bar_symmetric_mode,
+            WaveformPaintMode::BarAbsoluteUp => draw_in_bar_absolute_positive_mode,
+            WaveformPaintMode::BarAbsoluteDown => draw_in_bar_absolute_negative_mode,
         }
     }
 }
@@ -515,5 +549,12 @@ impl Drop for DrawerWithCache {
                 tex_manager.free(*texture_id);
             }
         }
+    }
+}
+
+#[inline(always)]
+fn draw_verticle_line(image: &mut egui::ColorImage, x: usize, min_y: usize, max_y: usize) {
+    for y in min_y..=max_y {
+        image[(x, y)] = egui::Color32::WHITE;
     }
 }
