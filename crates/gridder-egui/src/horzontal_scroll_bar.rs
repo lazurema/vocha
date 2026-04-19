@@ -1,14 +1,12 @@
+use crate::view_range::ViewRange;
+
 pub struct HorizontalScrollBar<'a> {
-    start_percent: &'a mut f32,
-    size_percent: f32,
+    view_range: &'a mut ViewRange,
 }
 
 impl<'a> HorizontalScrollBar<'a> {
-    pub fn new(start_percent: &'a mut f32, size_percent: f32) -> Self {
-        Self {
-            start_percent,
-            size_percent,
-        }
+    pub fn new(view_range: &'a mut ViewRange) -> Self {
+        Self { view_range }
     }
 }
 
@@ -30,22 +28,28 @@ impl egui::Widget for HorizontalScrollBar<'_> {
         );
 
         let thumb_rect = egui::Rect::from_min_size(
-            egui::pos2(rect.left() + *self.start_percent * rect.width(), rect.top()),
-            egui::vec2(self.size_percent * rect.width(), rect.height()),
+            egui::pos2(
+                rect.left() + (self.view_range.start_points(rect.width())) as f32,
+                rect.top(),
+            ),
+            egui::vec2(
+                self.view_range.view_points(rect.width()) as f32,
+                rect.height(),
+            ),
         );
 
         let mut delta_points = 0.0;
         Thumb::new(thumb_rect).show(ui, &mut delta_points);
         if delta_points != 0.0 {
-            let delta_percent = delta_points / rect.width();
-            *self.start_percent = (*self.start_percent + delta_percent).clamp(0.0, 1.0);
+            let delta_ratio = delta_points / rect.width();
+            self.view_range.shift(delta_ratio);
         }
 
         if let Some(cursor_pos) = ui.pointer_interact_pos()
             && resp.is_pointer_button_down_on()
         {
-            let click_percent = (cursor_pos.x - rect.left()) / rect.width();
-            *self.start_percent = (click_percent - self.size_percent / 2.0).clamp(0.0, 1.0);
+            self.view_range
+                .move_to((cursor_pos.x as f64 - rect.left() as f64) / rect.width() as f64);
         }
 
         resp

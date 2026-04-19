@@ -12,6 +12,7 @@ pub struct Waveform {
     points_per_second: f32,
     /// The horizontal offset of the waveform in points.
     offset_points: f32,
+
     /// A function that selects the paint mode based on the current zoom level (
     /// [`Self::points_per_second`]).
     paint_mode_selector: Box<dyn Fn(f32) -> WaveformPaintMode>,

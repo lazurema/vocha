@@ -11,6 +11,7 @@ use eframe::egui::{self, Widget as _};
 use gridder_egui::{
     horizontal_scroll_and_zoom_area::HorizontalScrollAndZoomArea,
     horzontal_scroll_bar::HorizontalScrollBar,
+    view_range::ViewRange,
     waveform::{WaveData, Waveform},
 };
 use rodio::Source as _;
@@ -147,10 +148,7 @@ pub struct Project {
 
     last_frame_title_name: Option<Option<String>>,
 
-    points_per_second: f32,
-    offset_points: f32,
-
-    max_seconds: f32,
+    view_range: ViewRange,
 }
 
 enum ProjectAudioLifeCycle {
@@ -173,6 +171,14 @@ enum ProjectTextGridLifeCycle {
     Loading(Mutex<mpsc::Receiver<Result<TextGrid, String>>>),
     Loaded(TextGrid),
     Error(String),
+}
+
+impl ProjectAudio {
+    fn length_in_seconds(&self) -> f64 {
+        self.samples_interleaved.len() as f64
+            / self.channels.get() as f64
+            / self.sample_rate.get() as f64
+    }
 }
 
 impl Project {
@@ -201,9 +207,7 @@ impl Project {
             textgrid_path: None,
             textgrid: ProjectTextGridLifeCycle::Absent,
             last_frame_title_name: None,
-            points_per_second: 500.0,
-            offset_points: 0.0,
-            max_seconds: 0.0,
+            view_range: ViewRange::default(),
         }
     }
 
@@ -354,39 +358,24 @@ impl Project {
         }
     }
 
-    fn update_max_seconds(&mut self) {
-        let max_seconds = {
-            let max_seconds_from_audio =
-                if let ProjectAudioLifeCycle::Loaded(ref audio) = self.audio {
-                    audio.samples_interleaved.len() as f32
-                        / audio.channels.get() as f32
-                        / audio.sample_rate.get() as f32
-                } else {
-                    0.0
-                };
-            let max_seconds_from_textgrid =
-                if let ProjectTextGridLifeCycle::Loaded(ref textgrid) = self.textgrid {
-                    textgrid.xmax as f32
-                } else {
-                    0.0
-                };
-
-            max_seconds_from_audio.max(max_seconds_from_textgrid)
+    fn length_in_seconds(&self) -> f64 {
+        let audio_length = if let ProjectAudioLifeCycle::Loaded(ref audio) = self.audio {
+            audio.length_in_seconds()
+        } else {
+            0.0
+        };
+        let textgrid_length = if let ProjectTextGridLifeCycle::Loaded(ref textgrid) = self.textgrid
+        {
+            textgrid.xmax
+        } else {
+            0.0
         };
 
-        self.max_seconds = max_seconds;
+        audio_length.max(textgrid_length)
     }
 
-    fn start_seconds(&self) -> f32 {
-        self.offset_points / self.points_per_second
-    }
-
-    fn minimal_points_per_second(&self, total_points: f32) -> f32 {
-        total_points / self.max_seconds
-    }
-
-    fn reset_scroll_and_zoom(&mut self, total_points: f32) {
-        self.points_per_second = self.minimal_points_per_second(total_points);
+    fn reset_scroll_and_zoom(&mut self) {
+        self.view_range = ViewRange::default();
     }
 }
 
@@ -409,24 +398,15 @@ impl Project {
             is_updated |= self.update_textgrid();
         }
 
-        // TODO: make it precise.
-        let imprecise_drawer_canvas_width = ui.available_width();
         if is_updated {
-            self.update_max_seconds();
-            self.reset_scroll_and_zoom(imprecise_drawer_canvas_width);
-        } else if self.points_per_second
-            < self.minimal_points_per_second(imprecise_drawer_canvas_width)
-        {
-            self.reset_scroll_and_zoom(imprecise_drawer_canvas_width);
+            self.reset_scroll_and_zoom();
         }
 
         self.update_title_name(ui, &l);
 
         self.header_pane_ui(ui, &preview);
 
-        if self.max_seconds != 0.0 {
-            self.main_pane_ui(ui, &l);
-        }
+        self.main_pane_ui(ui, &l);
     }
 
     fn header_pane_ui(&mut self, ui: &mut egui::Ui, preview: &Option<ProjectPreview>) {
@@ -500,28 +480,7 @@ impl Project {
             ui.end_row();
         });
 
-        if self.max_seconds != 0.0 {
-            self.scroll_bar_ui(ui);
-        }
-    }
-
-    fn scroll_bar_ui(&mut self, ui: &mut egui::Ui) {
-        let mut start_percent = (self.start_seconds() / self.max_seconds).min(1.0);
-        let old_start_percent = start_percent;
-        let seconds_in_view = ui.available_width() / self.points_per_second;
-        let size_percent = (seconds_in_view / self.max_seconds).min(1.0);
-
-        HorizontalScrollBar::new(&mut start_percent, size_percent).ui(ui);
-
-        if old_start_percent != start_percent {
-            self.offset_points = start_percent * self.max_seconds * self.points_per_second;
-            if self.offset_points + seconds_in_view * self.points_per_second
-                > self.max_seconds * self.points_per_second
-            {
-                self.offset_points = self.max_seconds * self.points_per_second
-                    - seconds_in_view * self.points_per_second;
-            }
-        }
+        HorizontalScrollBar::new(&mut self.view_range).ui(ui);
     }
 
     fn main_pane_ui(&mut self, ui: &mut egui::Ui, l: &L10N) {
@@ -587,10 +546,11 @@ impl Project {
         });
 
         let size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
-        let max_seconds = self.max_seconds;
 
         ui.scope(|ui| {
             ui.style_mut().spacing.item_spacing.y = -1.0;
+
+            let length_in_seconds = self.length_in_seconds();
 
             for channel in 0..audio.channels.get() {
                 egui::Frame::new()
@@ -603,17 +563,17 @@ impl Project {
                         },
                     ))
                     .show(ui, |ui| {
-                        HorizontalScrollAndZoomArea::new(
-                            &mut self.points_per_second,
-                            &mut self.offset_points,
-                            max_seconds,
-                        )
-                        .show(
+                        HorizontalScrollAndZoomArea::new(&mut self.view_range).show(
                             ui,
-                            |ui, points_per_second, offset_points| {
+                            |ui, view_range| {
+                                let points_per_second =
+                                    (size.x as f64 / view_range.view_ratio()) / length_in_seconds;
+                                let offset_points =
+                                    view_range.start_points(length_in_seconds * points_per_second);
+
                                 Waveform::new(size, wave_data.clone(), channel)
-                                    .points_per_second(points_per_second)
-                                    .offset_points(offset_points)
+                                    .points_per_second(points_per_second as f32)
+                                    .offset_points(offset_points as f32)
                                     .ui(ui)
                             },
                         );
