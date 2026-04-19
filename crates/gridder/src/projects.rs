@@ -10,7 +10,7 @@ use eframe::egui::{self, Widget as _};
 
 use gridder_egui::{
     horizontal_scroll_and_zoom_area::HorizontalScrollAndZoomArea,
-    horzontal_scroll_bar::HorizontalScrollBar,
+    horizontal_scroll_bar::HorizontalScrollBar,
     view_range::ViewRange,
     waveform::{WaveData, Waveform},
 };
