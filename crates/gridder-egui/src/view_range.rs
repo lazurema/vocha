@@ -75,4 +75,11 @@ impl ViewRange {
             (zoom_center - pointer_ratio * new_view_ratio).clamp(0.0, 1.0 - new_view_ratio);
         self.update(new_start, new_start + new_view_ratio);
     }
+
+    /// Attempt to prevent the density of points from changing after the width
+    /// of the view changes.
+    pub fn anti_stretch_after_resize(&mut self, delta: impl Into<f64>) {
+        let new_view_ratio = self.view_ratio() * delta.into();
+        self.update(self.start_ratio, self.start_ratio + new_view_ratio);
+    }
 }

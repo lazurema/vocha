@@ -147,6 +147,7 @@ pub struct Project {
     textgrid: ProjectTextGridLifeCycle,
 
     last_frame_title_name: Option<Option<String>>,
+    last_waveform_width: Option<f32>,
 
     view_range: ViewRange,
 }
@@ -207,6 +208,7 @@ impl Project {
             textgrid_path: None,
             textgrid: ProjectTextGridLifeCycle::Absent,
             last_frame_title_name: None,
+            last_waveform_width: None,
             view_range: ViewRange::default(),
         }
     }
@@ -546,11 +548,22 @@ impl Project {
         });
 
         let size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
+        if let Some(last_waveform_width) = self.last_waveform_width
+            && (last_waveform_width - size.x as f32).abs() > f32::EPSILON
+        {
+            self.view_range
+                .anti_stretch_after_resize(size.x / last_waveform_width);
+        }
+        self.last_waveform_width = Some(size.x as f32);
+
+        let length_in_seconds = self.length_in_seconds();
+        let points_per_second = (size.x as f64 / self.view_range.view_ratio()) / length_in_seconds;
+        let offset_points = self
+            .view_range
+            .start_points(length_in_seconds * points_per_second);
 
         ui.scope(|ui| {
             ui.style_mut().spacing.item_spacing.y = -1.0;
-
-            let length_in_seconds = self.length_in_seconds();
 
             for channel in 0..audio.channels.get() {
                 egui::Frame::new()
@@ -565,12 +578,7 @@ impl Project {
                     .show(ui, |ui| {
                         HorizontalScrollAndZoomArea::new(&mut self.view_range).show(
                             ui,
-                            |ui, view_range| {
-                                let points_per_second =
-                                    (size.x as f64 / view_range.view_ratio()) / length_in_seconds;
-                                let offset_points =
-                                    view_range.start_points(length_in_seconds * points_per_second);
-
+                            |ui, _view_range| {
                                 Waveform::new(size, wave_data.clone(), channel)
                                     .points_per_second(points_per_second as f32)
                                     .offset_points(offset_points as f32)
