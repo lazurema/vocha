@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct ViewRange {
     start_ratio: f64,
     end_ratio: f64,

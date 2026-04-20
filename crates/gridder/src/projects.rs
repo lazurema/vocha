@@ -547,23 +547,16 @@ impl Project {
             samples_interleaved: audio.samples_interleaved.clone(),
         });
 
-        let size = egui::Vec2::new(ui.available_width(), TMP_HEIGHT);
-        if let Some(last_waveform_width) = self.last_waveform_width
-            && (last_waveform_width - size.x as f32).abs() > f32::EPSILON
-        {
-            self.view_range
-                .anti_stretch_after_resize(size.x / last_waveform_width);
-        }
-        self.last_waveform_width = Some(size.x as f32);
-
-        let length_in_seconds = self.length_in_seconds();
-        let points_per_second = (size.x as f64 / self.view_range.view_ratio()) / length_in_seconds;
-        let offset_points = self
-            .view_range
-            .start_points(length_in_seconds * points_per_second);
-
         ui.scope(|ui| {
             ui.style_mut().spacing.item_spacing.y = -1.0;
+
+            #[derive(Clone)]
+            struct Cache {
+                width: f32,
+                points_per_second: f64,
+                offset_points: f64,
+            }
+            let mut cache: Option<Cache> = None;
 
             for channel in 0..audio.channels.get() {
                 egui::Frame::new()
@@ -576,6 +569,39 @@ impl Project {
                         },
                     ))
                     .show(ui, |ui| {
+                        let Cache {
+                            width,
+                            points_per_second,
+                            offset_points,
+                        } = if let Some(cache) = &cache {
+                            cache.clone()
+                        } else {
+                            let width = ui.available_width();
+                            if let Some(last_waveform_width) = self.last_waveform_width
+                                && (last_waveform_width - width).abs() > f32::EPSILON
+                            {
+                                self.view_range
+                                    .anti_stretch_after_resize(width / last_waveform_width);
+                            }
+                            self.last_waveform_width = Some(width);
+
+                            let length_in_seconds = self.length_in_seconds();
+                            let points_per_second =
+                                (width as f64 / self.view_range.view_ratio()) / length_in_seconds;
+                            let offset_points = self
+                                .view_range
+                                .start_points(length_in_seconds * points_per_second);
+
+                            let some_cache = Cache {
+                                width,
+                                points_per_second,
+                                offset_points,
+                            };
+                            cache = Some(some_cache.clone());
+                            some_cache
+                        };
+                        let size = egui::vec2(width, TMP_HEIGHT);
+
                         HorizontalScrollAndZoomArea::new(&mut self.view_range).show(
                             ui,
                             |ui, _view_range| {
