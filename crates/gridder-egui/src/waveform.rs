@@ -17,6 +17,8 @@ pub struct Waveform {
     paint_mode_selector: Box<dyn Fn(f32) -> WaveformPaintMode>,
     /// The color to paint the waveform with.
     color: egui::Color32,
+    /// The color of the center line. If `None`, the center line is not drawn.
+    center_line_color: Option<egui::Color32>,
 
     data: Arc<WaveData>,
     channel: u16,
@@ -98,6 +100,7 @@ impl Waveform {
             offset_points: 0.0,
             paint_mode_selector: Box::new(default_paint_mode_selector),
             color: egui::Color32::GRAY,
+            center_line_color: None,
             data,
             channel,
         }
@@ -123,6 +126,11 @@ impl Waveform {
 
     pub fn color(mut self, color: egui::Color32) -> Self {
         self.color = color;
+        self
+    }
+
+    pub fn center_line_color(mut self, center_line_color: Option<egui::Color32>) -> Self {
+        self.center_line_color = center_line_color;
         self
     }
 
@@ -161,6 +169,10 @@ impl egui::Widget for Waveform {
             self.channel,
         );
         if ui.is_rect_visible(resp.rect) {
+            if let Some(center_line_color) = self.center_line_color {
+                draw_center_line(ui, resp.rect, center_line_color);
+            }
+
             drawer
                 .lock()
                 .expect("Failed to acquire lock on drawer.")
@@ -173,6 +185,18 @@ impl egui::Widget for Waveform {
 
         resp
     }
+}
+
+fn draw_center_line(ui: &mut egui::Ui, rect: egui::Rect, center_line_color: egui::Color32) {
+    let painter = ui.painter_at(rect);
+    let center_y = rect.top() + rect.height() / 2.0;
+    painter.line_segment(
+        [
+            egui::pos2(rect.left(), center_y),
+            egui::pos2(rect.right(), center_y),
+        ],
+        (1.0, center_line_color),
+    );
 }
 
 mod drawer {

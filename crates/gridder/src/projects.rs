@@ -608,6 +608,13 @@ impl Project {
                                 Waveform::new(size, wave_data.clone(), channel)
                                     .points_per_second(points_per_second as f32)
                                     .offset_points(offset_points as f32)
+                                    .color(match ui.theme() {
+                                        egui::Theme::Dark => egui::Color32::LIGHT_GRAY,
+                                        egui::Theme::Light => egui::Color32::DARK_GRAY,
+                                    })
+                                    .center_line_color(Some(
+                                        egui::Color32::GRAY.linear_multiply(0.5),
+                                    ))
                                     .ui(ui)
                             },
                         );
