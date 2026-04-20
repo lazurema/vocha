@@ -548,8 +548,6 @@ impl Project {
         });
 
         ui.scope(|ui| {
-            ui.style_mut().spacing.item_spacing.y = -1.0;
-
             #[derive(Clone)]
             struct Cache {
                 width: f32,
@@ -558,15 +556,21 @@ impl Project {
             }
             let mut cache: Option<Cache> = None;
 
+            let border_stroke = egui::Stroke::new(
+                1.0,
+                match ui.theme() {
+                    egui::Theme::Dark => egui::Color32::WHITE,
+                    egui::Theme::Light => egui::Color32::BLACK,
+                },
+            );
+            ui.style_mut().spacing.item_spacing.y = -border_stroke.width;
+
             for channel in 0..audio.channels.get() {
                 egui::Frame::new()
                     .fill(ui.visuals().extreme_bg_color)
                     .stroke(egui::Stroke::new(
-                        1.0,
-                        match ui.theme() {
-                            egui::Theme::Dark => egui::Color32::WHITE,
-                            egui::Theme::Light => egui::Color32::BLACK,
-                        },
+                        border_stroke.width,
+                        egui::Color32::TRANSPARENT,
                     ))
                     .show(ui, |ui| {
                         let Cache {
@@ -601,6 +605,13 @@ impl Project {
                             some_cache
                         };
                         let size = egui::vec2(width, TMP_HEIGHT);
+
+                        draw_borders_in_frame(
+                            ui,
+                            &self.view_range,
+                            egui::Rect::from_min_size(ui.min_rect().min, size),
+                            border_stroke,
+                        );
 
                         HorizontalScrollAndZoomArea::new(&mut self.view_range).show(
                             ui,
@@ -647,4 +658,52 @@ fn two_cells(
         .horizontal(|mut strip| {
             strip.cell(|ui| right(ui));
         });
+}
+
+fn draw_borders_in_frame(
+    ui: &mut egui::Ui,
+    view_range: &ViewRange,
+    inner_rect: egui::Rect,
+    stroke: egui::Stroke,
+) {
+    let stroke_more = egui::Stroke::new(stroke.width, stroke.color.linear_multiply(0.5));
+    let width = stroke.width;
+
+    let painter = ui.painter();
+    painter.line_segment(
+        [
+            egui::pos2(inner_rect.left() - width, inner_rect.top() - width),
+            egui::pos2(inner_rect.right() + width, inner_rect.top() - width),
+        ],
+        stroke,
+    );
+    painter.line_segment(
+        [
+            egui::pos2(inner_rect.left() - width, inner_rect.bottom() + width),
+            egui::pos2(inner_rect.right() + width, inner_rect.bottom() + width),
+        ],
+        stroke,
+    );
+    painter.line_segment(
+        [
+            egui::pos2(inner_rect.left(), inner_rect.top() - width),
+            egui::pos2(inner_rect.left(), inner_rect.bottom() + width),
+        ],
+        if view_range.start_ratio() < f64::EPSILON {
+            stroke
+        } else {
+            stroke_more
+        },
+    );
+    painter.line_segment(
+        [
+            egui::pos2(inner_rect.right(), inner_rect.top() - width),
+            egui::pos2(inner_rect.right(), inner_rect.bottom() + width),
+        ],
+        if 1.0 - view_range.end_ratio() < f64::EPSILON {
+            stroke
+        } else {
+            stroke_more
+        },
+    );
 }
