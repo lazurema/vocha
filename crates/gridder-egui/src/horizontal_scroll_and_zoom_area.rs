@@ -20,6 +20,10 @@ impl<'a> HorizontalScrollAndZoomArea<'a> {
 
         let resp = content(ui, view_range);
 
+        if !ui.is_rect_visible(resp.rect) {
+            return;
+        }
+
         let cursor_pos = if let Some(info) = ui.multi_touch() {
             Some(info.center_pos)
         } else {

@@ -161,10 +161,12 @@ impl egui::Widget for Waveform {
             self.data.clone(),
             self.channel,
         );
-        drawer
-            .lock()
-            .expect("Failed to acquire lock on drawer.")
-            .paint(ui, resp.rect, self.offset_points, self.color);
+        if ui.is_rect_visible(resp.rect) {
+            drawer
+                .lock()
+                .expect("Failed to acquire lock on drawer.")
+                .paint(ui, resp.rect, self.offset_points, self.color);
+        }
         ui.memory_mut(|mem| {
             let drawer_publisher = mem.caches.cache::<DrawerPublisher<'_>>();
             drawer_publisher.set(drawer_id, drawer);

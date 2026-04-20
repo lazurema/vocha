@@ -21,6 +21,10 @@ impl egui::Widget for HorizontalScrollBar<'_> {
             egui::Sense::click_and_drag(),
         );
 
+        if !ui.is_rect_visible(rect) {
+            return resp;
+        }
+
         ui.painter().rect_filled(
             rect,
             rect.height() / 2.0,
