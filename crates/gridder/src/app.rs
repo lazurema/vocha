@@ -49,7 +49,7 @@ impl eframe::App for GridderApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Panel::top("top_bar")
             .frame(egui::Frame::new().inner_margin(4))
-            .show_inside(ui, |ui| {
+            .show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
                     self.language_selector(ui);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -67,7 +67,7 @@ impl eframe::App for GridderApp {
                 })
             });
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             let project_preview = ProjectPreview::extract_from_ui(ui);
 
             ui.with_layout(
@@ -119,7 +119,7 @@ impl eframe::App for GridderApp {
                             unimplemented!("Embedded viewports are not supported yet.");
                             // project.ui(ui, l10n.clone());
                         } else {
-                            egui::CentralPanel::default().show_inside(ui, |ui| {
+                            egui::CentralPanel::default().show(ui, |ui| {
                                 project.ui(ui, l10n.clone());
 
                                 if ui.input(|i| i.viewport().close_requested()) {
