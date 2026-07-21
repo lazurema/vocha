@@ -233,7 +233,7 @@ impl LanguageCode {
     }
 }
 
-pub fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
+pub fn load_system_fonts(fonts: &mut FontDefinitions) {
     tracing::debug!("Attempting to load fonts");
 
     let font_name_list = LanguageCode::preferred_font_name_list(&get_user_system_language_codes());
@@ -280,7 +280,6 @@ pub fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
             )
         }
     }
-    fonts
 }
 
 #[cfg(target_os = "macos")]

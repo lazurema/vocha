@@ -31,7 +31,8 @@ impl GridderApp {
     }
 
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let mut fonts = load_system_fonts(egui::FontDefinitions::default());
+        let mut fonts = egui::FontDefinitions::default();
+        load_system_fonts(&mut fonts);
         egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
         cc.egui_ctx.set_fonts(fonts);
 
