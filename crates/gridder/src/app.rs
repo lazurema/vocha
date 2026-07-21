@@ -17,7 +17,7 @@ pub struct GridderApp {
 
 impl GridderApp {
     pub fn name() -> &'static str {
-        "Gridder"
+        "Voĉa Gridder @ Lazurema"
     }
 
     pub fn native_options() -> eframe::NativeOptions {
