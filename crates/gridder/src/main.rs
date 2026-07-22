@@ -1,9 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 mod app;
-mod font_loading;
 mod l10n;
-mod projects;
+mod states;
+mod utils;
+mod views;
 
 use snafu::prelude::*;
 
