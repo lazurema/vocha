@@ -101,7 +101,11 @@ impl WelcomeWindow {
                     }
                 }
                 if new_language_code != self.l.current_language().code() {
-                    self.l.set_current_language(new_language_code);
+                    self.settings
+                        .write()
+                        .expect("Failed to acquire write lock on settings.")
+                        .l10n_mut
+                        .set_current_language(new_language_code);
                 }
             });
     }

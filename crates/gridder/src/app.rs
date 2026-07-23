@@ -4,7 +4,7 @@ use eframe::egui::{self, ViewportBuilder};
 
 use crate::{
     app_title,
-    l10n::L10N,
+    l10n::{L10N, L10NMut},
     states::settings::Settings,
     utils::font_loading::load_system_fonts,
     views::windows::{
@@ -46,8 +46,9 @@ impl GridderApp {
         egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
         cc.egui_ctx.set_fonts(fonts);
 
-        let l10n = L10N::new();
-        let settings = Arc::new(RwLock::new(Settings::new(l10n.clone())));
+        let l10n_mut = L10NMut::new();
+        let l10n = l10n_mut.inner().clone();
+        let settings = Arc::new(RwLock::new(Settings::new(l10n_mut.clone())));
 
         Self {
             l: l10n.clone(),
