@@ -11,8 +11,7 @@ textgrid-rs = { version = "0.1.0", path = "crates/textgrid-rs" }
 eframe = { version = "0.35.0", default-features = false }
 egui = { version = "0.35.0", default-features = false }
 egui_extras = "0.35.0"
-# https://github.com/amPerl/egui-phosphor/pull/41
-egui-phosphor = { git = "https://github.com/amPerl/egui-phosphor.git", rev = "5a0075f68a463f6b316d39776fff519a2762b729" }
+egui-phosphor = "0.13.0"
 
 # Other dependencies.
 bytemuck = "1.25.0"
