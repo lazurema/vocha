@@ -18,6 +18,7 @@ use crate::{
         ProjectAudio, ProjectAudioLifeCycle, ProjectPreviewState, ProjectState,
         ProjectTextGridLifeCycle,
     },
+    views::utils::two_cells_h,
 };
 
 pub struct OpenedProject {
@@ -147,14 +148,15 @@ impl ProjectWindow {
                     // project.ui(ui);
                 } else {
                     egui::CentralPanel::default().show(ui, |ui| {
-                        project.ui(ui);
-
                         if ui.input(|i| i.viewport().close_requested()) {
                             projects
                                 .write()
                                 .expect("Failed to acquire write lock on projects.")
                                 .remove(project.id());
+                            return;
                         }
+
+                        project.ui(ui);
                     });
                 }
             },
@@ -210,7 +212,7 @@ impl ProjectWindow {
                 truncate_label(ui, &text);
             }
 
-            two_cells(
+            two_cells_h(
                 ui,
                 full_width,
                 |ui| {
@@ -235,7 +237,7 @@ impl ProjectWindow {
             );
             ui.end_row();
 
-            two_cells(
+            two_cells_h(
                 ui,
                 full_width,
                 |ui| {
@@ -446,31 +448,6 @@ impl ProjectWindow {
             }
         });
     }
-}
-
-fn two_cells(
-    ui: &mut egui::Ui,
-    full_width: f32,
-    left: impl FnOnce(&mut egui::Ui),
-    right: impl FnOnce(&mut egui::Ui),
-) {
-    let left_width = ui
-        .horizontal(|ui| {
-            left(ui);
-        })
-        .response
-        .rect
-        .width();
-
-    // TODO: find out what this magic number is.
-    const MAGIC: f32 = 16.0;
-
-    let right_width = full_width - left_width - ui.style().spacing.item_spacing.x - MAGIC;
-    egui_extras::StripBuilder::new(ui)
-        .size(egui_extras::Size::exact(right_width))
-        .horizontal(|mut strip| {
-            strip.cell(|ui| right(ui));
-        });
 }
 
 fn draw_borders_in_frame(

@@ -67,6 +67,7 @@ enum LanguageCode {
     Ja,
     Ko,
     Ar,
+    MulLatn,
 }
 
 impl Display for LanguageCode {
@@ -78,6 +79,7 @@ impl Display for LanguageCode {
             LanguageCode::Ja => write!(f, "ja"),
             LanguageCode::Ko => write!(f, "ko"),
             LanguageCode::Ar => write!(f, "ar"),
+            LanguageCode::MulLatn => write!(f, "mul-Latn"),
         }
     }
 }
@@ -91,6 +93,7 @@ impl LanguageCode {
             Self::Ja,
             Self::Ko,
             Self::Ar,
+            Self::MulLatn,
         ]
     }
 
@@ -154,6 +157,16 @@ impl LanguageCode {
                 "Al Tarikh",
                 "Segoe UI",
             ],
+            LanguageCode::MulLatn => vec![
+                // builtin
+                "Helvetica Neue", // macOS. TODO: find a way to use `SF Pro`.
+                "Segoe UI",       // Windows
+                "Ubuntu",         // Some Linux distributions
+                // Noto Sans
+                "Noto Sans",
+                // Other fonts
+                "Arial",
+            ],
         }
     }
 
@@ -188,8 +201,13 @@ impl LanguageCode {
 
     fn preferred_language_code_list(strs: &[String]) -> Vec<Self> {
         let mut codes = Vec::new();
-        let mut remain = Self::all();
+        let mut remain = Self::all()
+            .into_iter()
+            .filter(|c| *c != Self::MulLatn)
+            .collect::<Vec<_>>();
         let mut prefers_hant = false;
+
+        codes.push(LanguageCode::MulLatn);
 
         for str in strs {
             if let Some(code) = Self::from_str_most_similar(&str) {

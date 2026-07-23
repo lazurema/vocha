@@ -7,7 +7,10 @@ use crate::{
     states::{projects::ProjectPreviewState, settings::Settings},
     views::{
         widgets::project_preview::ProjectPreviewWidget,
-        windows::project_window::{OpenedProjects, ProjectWindow},
+        windows::{
+            about_window::ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS,
+            project_window::{OpenedProjects, ProjectWindow},
+        },
     },
 };
 
@@ -23,7 +26,12 @@ impl WelcomeWindow {
 }
 
 impl WelcomeWindow {
-    pub fn ui(&mut self, ui: &mut egui::Ui, projects: Arc<RwLock<OpenedProjects>>) {
+    pub fn ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        about_window_open_state: Arc<std::sync::atomic::AtomicU8>,
+        projects: Arc<RwLock<OpenedProjects>>,
+    ) {
         egui::Panel::top("top_bar")
             .frame(egui::Frame::new().inner_margin(4))
             .show(ui, |ui| {
@@ -32,13 +40,11 @@ impl WelcomeWindow {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         self.settings(ui);
 
-                        let repo_link = env!("CARGO_PKG_REPOSITORY");
-                        if !repo_link.is_empty() {
-                            if ui.button(egui_phosphor::regular::HOUSE_LINE).clicked() {
-                                ui.ctx().send_cmd(egui::OutputCommand::OpenUrl(
-                                    egui::OpenUrl::new_tab(env!("CARGO_PKG_REPOSITORY")),
-                                ));
-                            }
+                        if ui.button(egui_phosphor::regular::INFO).clicked() {
+                            about_window_open_state.store(
+                                ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS,
+                                std::sync::atomic::Ordering::Relaxed,
+                            );
                         }
                     })
                 })

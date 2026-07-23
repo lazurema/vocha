@@ -15,6 +15,7 @@ impl Language for English {
         use Term::*;
 
         match term {
+            About => "About".to_string(),
             AlwaysOnTopToggleLabel => "Always on Top".to_string(),
             DropHintText {
                 supported_audio_extensions,

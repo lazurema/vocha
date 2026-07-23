@@ -76,6 +76,7 @@ impl L10N {
 }
 
 pub enum Term {
+    About,
     AlwaysOnTopToggleLabel,
     DropHintText {
         supported_audio_extensions: &'static [&'static str],
