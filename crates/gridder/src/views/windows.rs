@@ -2,6 +2,7 @@ use std::sync::{Arc, atomic::AtomicU8};
 
 pub mod about_window;
 pub mod project_window;
+pub mod settings_window;
 pub mod welcome_window;
 
 #[derive(Clone)]

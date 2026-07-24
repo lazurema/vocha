@@ -30,6 +30,7 @@ impl WelcomeWindow {
         &mut self,
         ui: &mut egui::Ui,
         about_window_open_state: SingletonWindowOpenState,
+        settings_window_open_state: SingletonWindowOpenState,
         projects: Arc<RwLock<OpenedProjects>>,
     ) {
         egui::Panel::top("top_bar")
@@ -38,8 +39,9 @@ impl WelcomeWindow {
                 ui.horizontal_wrapped(|ui| {
                     self.language_selector(ui);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        self.settings(ui);
-
+                        if ui.button(egui_phosphor::regular::GEAR).clicked() {
+                            settings_window_open_state.open();
+                        }
                         if ui.button(egui_phosphor::regular::INFO).clicked() {
                             about_window_open_state.open();
                         }
@@ -105,64 +107,5 @@ impl WelcomeWindow {
                         .set_current_language(new_language_code);
                 }
             });
-    }
-
-    fn settings(&mut self, ui: &mut egui::Ui) {
-        egui::containers::menu::MenuButton::new(egui_phosphor::regular::GEAR)
-            .config(
-                egui::containers::menu::MenuConfig::new()
-                    .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside),
-            )
-            .ui(ui, |ui| {
-                egui::Grid::new("settings_grid").show(ui, |ui| {
-                    self.settings_always_on_top_toggle(ui);
-                    ui.end_row();
-                    self.settings_theme_selector(ui);
-                    ui.end_row();
-                });
-            });
-    }
-
-    fn settings_always_on_top_toggle(&mut self, ui: &mut egui::Ui) {
-        let old = self
-            .settings
-            .read()
-            .expect("Failed to acquire read lock on settings.")
-            .is_welcome_window_always_on_top;
-        let mut current = old;
-
-        ui.label(self.l.tl(&Term::AlwaysOnTopToggleLabel));
-        egui::Checkbox::without_text(&mut current).ui(ui);
-        if old != current {
-            ui.ctx()
-                .send_viewport_cmd(egui::ViewportCommand::WindowLevel(if current {
-                    egui::WindowLevel::AlwaysOnTop
-                } else {
-                    egui::WindowLevel::Normal
-                }));
-            self.settings
-                .write()
-                .expect("Failed to acquire write lock on settings.")
-                .is_welcome_window_always_on_top = current;
-        }
-    }
-
-    fn settings_theme_selector(&mut self, ui: &mut egui::Ui) {
-        ui.label(self.l.tl(&Term::Theme));
-
-        ui.horizontal(|ui| {
-            let mut theme = ui.theme();
-            let old_theme = theme.clone();
-
-            ui.scope(|ui| {
-                ui.style_mut().spacing.item_spacing.x = 0.0;
-                ui.selectable_value(&mut theme, egui::Theme::Dark, egui_phosphor::regular::MOON);
-                ui.selectable_value(&mut theme, egui::Theme::Light, egui_phosphor::regular::SUN);
-            });
-
-            if theme != old_theme {
-                ui.set_theme(theme);
-            }
-        });
     }
 }

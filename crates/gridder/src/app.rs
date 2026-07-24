@@ -11,6 +11,7 @@ use crate::{
         SingletonWindowOpenState,
         about_window::AboutWindow,
         project_window::{OpenedProjects, ProjectWindow},
+        settings_window::SettingsWindow,
         welcome_window::WelcomeWindow,
     },
 };
@@ -23,6 +24,8 @@ pub struct GridderApp {
     welcome_window: WelcomeWindow,
     about_window: AboutWindow,
     about_window_open_state: SingletonWindowOpenState,
+    settings_window: SettingsWindow,
+    settings_window_open_state: SingletonWindowOpenState,
     projects: Arc<RwLock<OpenedProjects>>,
 }
 
@@ -57,6 +60,8 @@ impl GridderApp {
             welcome_window: WelcomeWindow::new(l10n.clone(), settings.clone()),
             about_window: AboutWindow::new(l10n.clone()),
             about_window_open_state: SingletonWindowOpenState::new(),
+            settings_window: SettingsWindow::new(l10n.clone(), settings.clone()),
+            settings_window_open_state: SingletonWindowOpenState::new(),
             projects: Arc::new(RwLock::new(OpenedProjects::new())),
         }
     }
@@ -67,12 +72,17 @@ impl eframe::App for GridderApp {
         self.welcome_window.ui(
             ui,
             self.about_window_open_state.clone(),
+            self.settings_window_open_state.clone(),
             self.projects.clone(),
         );
 
         if self.about_window_open_state.is_open() {
             self.about_window
                 .window(ui, self.about_window_open_state.clone());
+        }
+        if self.settings_window_open_state.is_open() {
+            self.settings_window
+                .window(ui, self.settings_window_open_state.clone());
         }
 
         for project in self

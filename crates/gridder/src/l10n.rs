@@ -91,7 +91,8 @@ impl L10NMut {
 
 pub enum Term {
     About,
-    AlwaysOnTopToggleLabel,
+    Settings,
+    Appearance,
     DropHintText {
         supported_audio_extensions: &'static [&'static str],
     },

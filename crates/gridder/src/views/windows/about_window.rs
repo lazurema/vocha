@@ -41,14 +41,15 @@ impl AboutWindow {
                 .with_resizable(false)
                 .with_always_on_top(),
             move |ui, class| {
+                if ui.input(|i| i.viewport().close_requested()) {
+                    open_state.close();
+                    return;
+                }
+
                 if class == egui::ViewportClass::EmbeddedWindow {
                     unimplemented!("Embedded viewports are not supported yet.");
                 } else {
                     egui::CentralPanel::default().show(ui, |ui| {
-                        if ui.input(|i| i.viewport().close_requested()) {
-                            open_state.close();
-                            return;
-                        }
                         widget.ui(ui);
                     });
                 }

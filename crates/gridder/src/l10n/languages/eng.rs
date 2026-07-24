@@ -16,7 +16,8 @@ impl Language for English {
 
         match term {
             About => "About".to_string(),
-            AlwaysOnTopToggleLabel => "Always on Top".to_string(),
+            Settings => "Settings".to_string(),
+            Appearance => "Appearance".to_string(),
             DropHintText {
                 supported_audio_extensions,
             } => {
