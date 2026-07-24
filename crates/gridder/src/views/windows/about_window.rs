@@ -1,4 +1,4 @@
-use std::sync::{Arc, LazyLock, atomic::AtomicU8};
+use std::sync::LazyLock;
 
 use eframe::{egui, epaint};
 
@@ -6,12 +6,8 @@ use crate::{
     app_name,
     definitions::built_info,
     l10n::{L10N, Term},
-    views::utils::two_cells_v,
+    views::{utils::two_cells_v, windows::SingletonWindowOpenState},
 };
-
-pub const ABOUT_WINDOW_OPEN_STATE_CLOSED: u8 = 0;
-pub const ABOUT_WINDOW_OPEN_STATE_OPEN: u8 = 1;
-pub const ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS: u8 = 2;
 
 static VIEWPORT_ID: LazyLock<egui::ViewportId> =
     LazyLock::new(|| egui::ViewportId::from_hash_of("AboutWindow"));
@@ -27,17 +23,11 @@ impl AboutWindow {
 }
 
 impl AboutWindow {
-    pub fn window(&mut self, ui: &mut egui::Ui, open_state: Arc<AtomicU8>) {
+    pub fn window(&mut self, ui: &mut egui::Ui, open_state: SingletonWindowOpenState) {
         let widget = AboutWidget::from_window_ref(self);
 
-        if open_state.load(std::sync::atomic::Ordering::Relaxed)
-            == ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS
-        {
+        if open_state.pop_is_desiring_focus() {
             ui.send_viewport_cmd_to(*VIEWPORT_ID, egui::ViewportCommand::Focus);
-            open_state.store(
-                ABOUT_WINDOW_OPEN_STATE_OPEN,
-                std::sync::atomic::Ordering::Relaxed,
-            );
         }
 
         ui.ctx().show_viewport_deferred(
@@ -53,10 +43,7 @@ impl AboutWindow {
                 } else {
                     egui::CentralPanel::default().show(ui, |ui| {
                         if ui.input(|i| i.viewport().close_requested()) {
-                            open_state.store(
-                                ABOUT_WINDOW_OPEN_STATE_CLOSED,
-                                std::sync::atomic::Ordering::Relaxed,
-                            );
+                            open_state.close();
                             return;
                         }
                         widget.ui(ui);

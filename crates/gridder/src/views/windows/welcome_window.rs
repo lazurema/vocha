@@ -8,7 +8,7 @@ use crate::{
     views::{
         widgets::project_preview::ProjectPreviewWidget,
         windows::{
-            about_window::ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS,
+            SingletonWindowOpenState,
             project_window::{OpenedProjects, ProjectWindow},
         },
     },
@@ -29,7 +29,7 @@ impl WelcomeWindow {
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,
-        about_window_open_state: Arc<std::sync::atomic::AtomicU8>,
+        about_window_open_state: SingletonWindowOpenState,
         projects: Arc<RwLock<OpenedProjects>>,
     ) {
         egui::Panel::top("top_bar")
@@ -41,10 +41,7 @@ impl WelcomeWindow {
                         self.settings(ui);
 
                         if ui.button(egui_phosphor::regular::INFO).clicked() {
-                            about_window_open_state.store(
-                                ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS,
-                                std::sync::atomic::Ordering::Relaxed,
-                            );
+                            about_window_open_state.open();
                         }
                     })
                 })

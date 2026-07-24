@@ -8,7 +8,8 @@ use crate::{
     states::settings::Settings,
     utils::font_loading::load_system_fonts,
     views::windows::{
-        about_window::{ABOUT_WINDOW_OPEN_STATE_CLOSED, AboutWindow},
+        SingletonWindowOpenState,
+        about_window::AboutWindow,
         project_window::{OpenedProjects, ProjectWindow},
         welcome_window::WelcomeWindow,
     },
@@ -21,7 +22,7 @@ pub struct GridderApp {
 
     welcome_window: WelcomeWindow,
     about_window: AboutWindow,
-    about_window_open_state: Arc<std::sync::atomic::AtomicU8>,
+    about_window_open_state: SingletonWindowOpenState,
     projects: Arc<RwLock<OpenedProjects>>,
 }
 
@@ -55,9 +56,7 @@ impl GridderApp {
             settings: settings.clone(),
             welcome_window: WelcomeWindow::new(l10n.clone(), settings.clone()),
             about_window: AboutWindow::new(l10n.clone()),
-            about_window_open_state: Arc::new(std::sync::atomic::AtomicU8::new(
-                ABOUT_WINDOW_OPEN_STATE_CLOSED,
-            )),
+            about_window_open_state: SingletonWindowOpenState::new(),
             projects: Arc::new(RwLock::new(OpenedProjects::new())),
         }
     }
@@ -71,11 +70,7 @@ impl eframe::App for GridderApp {
             self.projects.clone(),
         );
 
-        if self
-            .about_window_open_state
-            .load(std::sync::atomic::Ordering::Relaxed)
-            != ABOUT_WINDOW_OPEN_STATE_CLOSED
-        {
+        if self.about_window_open_state.is_open() {
             self.about_window
                 .window(ui, self.about_window_open_state.clone());
         }
