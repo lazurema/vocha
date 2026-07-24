@@ -1,4 +1,4 @@
-use std::sync::{Arc, atomic::AtomicU8};
+use std::sync::{Arc, LazyLock, atomic::AtomicU8};
 
 use eframe::{egui, epaint};
 
@@ -12,6 +12,9 @@ use crate::{
 pub const ABOUT_WINDOW_OPEN_STATE_CLOSED: u8 = 0;
 pub const ABOUT_WINDOW_OPEN_STATE_OPEN: u8 = 1;
 pub const ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS: u8 = 2;
+
+static VIEWPORT_ID: LazyLock<egui::ViewportId> =
+    LazyLock::new(|| egui::ViewportId::from_hash_of("AboutWindow"));
 
 pub struct AboutWindow {
     l: L10N,
@@ -28,7 +31,7 @@ impl AboutWindow {
         let widget = AboutWidget::from_window_ref(self);
 
         ui.ctx().show_viewport_deferred(
-            egui::ViewportId::from_hash_of("AboutWindow"),
+            *VIEWPORT_ID,
             egui::ViewportBuilder::default()
                 .with_title(format!("{} {}", self.l.tl(&Term::About), app_name!()))
                 .with_inner_size((240.0, 240.0))
