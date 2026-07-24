@@ -30,6 +30,16 @@ impl AboutWindow {
     pub fn window(&mut self, ui: &mut egui::Ui, open_state: Arc<AtomicU8>) {
         let widget = AboutWidget::from_window_ref(self);
 
+        if open_state.load(std::sync::atomic::Ordering::Relaxed)
+            == ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS
+        {
+            ui.send_viewport_cmd_to(*VIEWPORT_ID, egui::ViewportCommand::Focus);
+            open_state.store(
+                ABOUT_WINDOW_OPEN_STATE_OPEN,
+                std::sync::atomic::Ordering::Relaxed,
+            );
+        }
+
         ui.ctx().show_viewport_deferred(
             *VIEWPORT_ID,
             egui::ViewportBuilder::default()
@@ -48,18 +58,6 @@ impl AboutWindow {
                                 std::sync::atomic::Ordering::Relaxed,
                             );
                             return;
-                        }
-                        if open_state.load(std::sync::atomic::Ordering::Relaxed)
-                            == ABOUT_WINDOW_OPEN_STATE_OPEN_DESIRING_FOCUS
-                        {
-                            // FIXME: doesn't seem to work correctly (macOS 15):
-                            // The window only gets focused when the mouse
-                            // pointer moves into the window.
-                            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Focus);
-                            open_state.store(
-                                ABOUT_WINDOW_OPEN_STATE_OPEN,
-                                std::sync::atomic::Ordering::Relaxed,
-                            );
                         }
                         widget.ui(ui);
                     });
