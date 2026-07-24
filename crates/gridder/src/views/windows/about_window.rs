@@ -25,6 +25,8 @@ impl AboutWindow {
 
 impl AboutWindow {
     pub fn window(&mut self, ui: &mut egui::Ui, open_state: Arc<AtomicU8>) {
+        let widget = AboutWidget::from_window_ref(self);
+
         ui.ctx().show_viewport_deferred(
             egui::ViewportId::from_hash_of("AboutWindow"),
             egui::ViewportBuilder::default()
@@ -56,36 +58,54 @@ impl AboutWindow {
                                 std::sync::atomic::Ordering::Relaxed,
                             );
                         }
-
-                        two_cells_v(
-                            ui,
-                            ui.available_height(),
-                            |ui| {
-                                ui.vertical_centered_justified(|ui| {
-                                    ui.label(egui::RichText::new(app_name!()).heading());
-                                });
-                            },
-                            |ui| {
-                                egui::Frame::new()
-                                    .stroke(epaint::Stroke::new(1.0, epaint::Color32::GRAY))
-                                    .show(ui, |ui| {
-                                        egui::ScrollArea::both()
-                                    .scroll_bar_visibility(
-                                        egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded,
-                                    )
-                                    .show(ui, |ui| {
-                                        Self::information_grid_inner(ui);
-                                    });
-                                    });
-                            },
-                        );
+                        widget.ui(ui);
                     });
                 }
             },
         );
     }
+}
 
-    fn information_grid_inner(ui: &mut egui::Ui) {
+struct AboutWidget {
+    #[expect(dead_code)]
+    l: L10N,
+}
+
+impl AboutWidget {
+    fn from_window_ref(window: &AboutWindow) -> Self {
+        Self {
+            l: window.l.clone(),
+        }
+    }
+}
+
+impl AboutWidget {
+    fn ui(&self, ui: &mut egui::Ui) {
+        two_cells_v(
+            ui,
+            ui.available_height(),
+            |ui| {
+                ui.vertical_centered_justified(|ui| {
+                    ui.label(egui::RichText::new(app_name!()).heading());
+                });
+            },
+            |ui| {
+                egui::Frame::new()
+                    .stroke(epaint::Stroke::new(1.0, epaint::Color32::GRAY))
+                    .show(ui, |ui| {
+                        egui::ScrollArea::both()
+                            .scroll_bar_visibility(
+                                egui::scroll_area::ScrollBarVisibility::VisibleWhenNeeded,
+                            )
+                            .show(ui, |ui| {
+                                self.information_grid_inner(ui);
+                            });
+                    });
+            },
+        );
+    }
+
+    fn information_grid_inner(&self, ui: &mut egui::Ui) {
         let height = egui::Grid::new("AboutInformation")
             .num_columns(2)
             .striped(true)

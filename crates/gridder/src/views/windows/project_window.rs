@@ -163,7 +163,7 @@ impl ProjectWindow {
         );
     }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
+    fn ui(&mut self, ui: &mut egui::Ui) {
         let mut is_updated = false;
 
         let preview = ProjectPreviewState::extract_from_ui(ui);
