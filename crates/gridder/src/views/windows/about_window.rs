@@ -6,7 +6,10 @@ use crate::{
     app_name,
     definitions::built_info,
     l10n::{L10N, Term},
-    views::{utils::two_cells_v, windows::SingletonWindowOpenState},
+    views::{
+        utils::{two_cells_v, with_min_height},
+        windows::SingletonWindowOpenState,
+    },
 };
 
 static VIEWPORT_ID: LazyLock<egui::ViewportId> =
@@ -94,33 +97,30 @@ impl AboutWidget {
     }
 
     fn information_grid_inner(&self, ui: &mut egui::Ui) {
-        let height = egui::Grid::new("AboutInformation")
-            .num_columns(2)
-            .striped(true)
-            .show(ui, |ui| {
-                let version = env!("CARGO_PKG_VERSION");
-                ui.label("Version");
-                ui.label(version);
-                ui.end_row();
-
-                if let Some(hash) = built_info::GIT_COMMIT_HASH {
-                    ui.label("Commit Hash");
-                    ui.label(hash);
+        with_min_height(ui, ui.available_height(), |ui| {
+            egui::Grid::new("AboutInformation")
+                .num_columns(2)
+                .striped(true)
+                .show(ui, |ui| {
+                    let version = env!("CARGO_PKG_VERSION");
+                    ui.label("Version");
+                    ui.label(version);
                     ui.end_row();
-                }
 
-                let repo_link = env!("CARGO_PKG_REPOSITORY");
-                if !repo_link.is_empty() {
-                    ui.label("Repository");
-                    ui.hyperlink(repo_link);
-                    ui.end_row();
-                }
-            })
-            .response
-            .rect
-            .height();
-        if height < ui.available_height() {
-            ui.allocate_space(egui::vec2(0.0, ui.available_height() - height));
-        }
+                    if let Some(hash) = built_info::GIT_COMMIT_HASH {
+                        ui.label("Commit Hash");
+                        ui.label(hash);
+                        ui.end_row();
+                    }
+
+                    let repo_link = env!("CARGO_PKG_REPOSITORY");
+                    if !repo_link.is_empty() {
+                        ui.label("Repository");
+                        ui.hyperlink(repo_link);
+                        ui.end_row();
+                    }
+                })
+                .response
+        });
     }
 }

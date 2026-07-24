@@ -1,5 +1,8 @@
 use eframe::egui;
 
+// TODO: find out what this magic number is.
+const MAGIC: f32 = 16.0;
+
 pub fn two_cells_h(
     ui: &mut egui::Ui,
     full_width: f32,
@@ -13,9 +16,6 @@ pub fn two_cells_h(
         .response
         .rect
         .width();
-
-    // TODO: find out what this magic number is.
-    const MAGIC: f32 = 16.0;
 
     let right_width = full_width - left_width - ui.style().spacing.item_spacing.x - MAGIC;
     egui_extras::StripBuilder::new(ui)
@@ -39,13 +39,22 @@ pub fn two_cells_v(
         .rect
         .height();
 
-    // TODO: find out what this magic number is.
-    const MAGIC: f32 = 16.0;
-
     let bottom_height = full_height - top_height - ui.style().spacing.item_spacing.y - MAGIC;
     egui_extras::StripBuilder::new(ui)
         .size(egui_extras::Size::exact(bottom_height))
         .vertical(|mut strip| {
             strip.cell(|ui| bottom(ui));
         });
+}
+
+pub fn with_min_height(
+    ui: &mut egui::Ui,
+    min_height: f32,
+    add_contents: impl FnOnce(&mut egui::Ui) -> egui::Response,
+) {
+    let min_height = min_height - MAGIC;
+    let height = add_contents(ui).rect.height();
+    if height < min_height {
+        ui.allocate_space(egui::vec2(0.0, min_height - height));
+    }
 }
