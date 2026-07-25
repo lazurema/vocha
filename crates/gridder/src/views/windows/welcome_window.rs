@@ -6,7 +6,7 @@ use crate::{
     l10n::{L10N, Term},
     states::{projects::ProjectPreviewState, settings::Settings},
     views::{
-        widgets::project_preview::ProjectPreviewWidget,
+        widgets::{language_selector::LanguageSelector, project_preview::ProjectPreviewWidget},
         windows::{
             SingletonWindowOpenState,
             project_window::{OpenedProjects, ProjectWindow},
@@ -37,7 +37,7 @@ impl WelcomeWindow {
             .frame(egui::Frame::new().inner_margin(4))
             .show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
-                    self.language_selector(ui);
+                    LanguageSelector::language_selector(self.l.clone(), &self.settings, ui);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button(egui_phosphor::regular::GEAR).clicked() {
                             settings_window_open_state.open();
@@ -79,33 +79,5 @@ impl WelcomeWindow {
                 },
             );
         });
-    }
-
-    fn language_selector(&mut self, ui: &mut egui::Ui) {
-        egui::ComboBox::from_id_salt("language_selector")
-            .selected_text(format!(
-                "{} {}",
-                egui_phosphor::regular::TRANSLATE,
-                self.l.current_language().display_name()
-            ))
-            .show_ui(ui, |ui| {
-                let mut new_language_code = self.l.current_language().code();
-                for language_code in L10N::available_language_codes() {
-                    if let Some(language) = self.l.get_language(language_code) {
-                        ui.selectable_value(
-                            &mut new_language_code,
-                            language.code(),
-                            language.display_name(),
-                        );
-                    }
-                }
-                if new_language_code != self.l.current_language().code() {
-                    self.settings
-                        .write()
-                        .expect("Failed to acquire write lock on settings.")
-                        .l10n_mut
-                        .set_current_language(new_language_code);
-                }
-            });
     }
 }

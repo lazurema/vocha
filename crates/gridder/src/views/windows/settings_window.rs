@@ -57,7 +57,6 @@ impl SettingsWindow {
 
 struct SettingsWidget {
     l: L10N,
-    #[expect(dead_code)]
     settings: Arc<RwLock<Settings>>,
 }
 
@@ -104,8 +103,10 @@ impl SettingsWidget {
                 });
 
                 if theme != old_theme {
-                    ui.set_theme(theme);
-                    // FIXME: other viewports are not updated immediately.
+                    self.settings
+                        .write()
+                        .expect("Failed to acquire write lock on settings.")
+                        .set_theme(ui, theme);
                 }
             });
         });

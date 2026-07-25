@@ -18,7 +18,6 @@ use crate::{
 
 pub struct GridderApp {
     l: L10N,
-    #[expect(dead_code)]
     settings: Arc<RwLock<Settings>>,
 
     welcome_window: WelcomeWindow,
@@ -68,6 +67,17 @@ impl GridderApp {
 }
 
 impl eframe::App for GridderApp {
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if let Some(theme) = self
+            .settings
+            .write()
+            .expect("Failed to acquire write lock on settings.")
+            .pop_dirty_theme()
+        {
+            ctx.set_theme(theme);
+        }
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.welcome_window.ui(
             ui,
