@@ -5,7 +5,7 @@ use eframe::egui;
 use crate::{
     l10n::{L10N, Term},
     states::settings::Settings,
-    views::windows::SingletonWindowOpenState,
+    views::{widgets::language_selector::LanguageSelector, windows::SingletonWindowOpenState},
 };
 
 static VIEWPORT_ID: LazyLock<egui::ViewportId> =
@@ -75,6 +75,15 @@ impl SettingsWidget {
             .default_open(true)
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(self.l.tl(&Term::Language));
+                        LanguageSelector::language_selector_without_icon(
+                            self.l.clone(),
+                            &self.settings,
+                            ui,
+                        );
+                    });
+
                     self.settings_theme_selector(ui);
                 });
             });

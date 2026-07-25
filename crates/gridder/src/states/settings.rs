@@ -18,8 +18,10 @@ impl Settings {
         }
     }
 
-    pub fn set_current_language(&mut self, language_code: &'static str) {
+    /// FIXME: non-root viewports are not updated immediately.
+    pub fn set_current_language(&mut self, ui: &egui::Ui, language_code: &'static str) {
         self.l10n_mut.set_current_language(language_code);
+        ui.request_repaint_of(egui::ViewportId::ROOT);
     }
 
     /// FIXME: non-root viewports are not updated immediately.

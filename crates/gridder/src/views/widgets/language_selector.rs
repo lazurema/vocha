@@ -8,12 +8,39 @@ pub struct LanguageSelector;
 
 impl LanguageSelector {
     pub fn language_selector(l: L10N, settings: impl AsRef<RwLock<Settings>>, ui: &mut egui::Ui) {
-        egui::ComboBox::from_id_salt("language_selector")
-            .selected_text(format!(
+        Self::language_selector_internal(
+            l.clone(),
+            settings,
+            ui,
+            &format!(
                 "{} {}",
                 egui_phosphor::regular::TRANSLATE,
                 l.current_language().display_name()
-            ))
+            ),
+        );
+    }
+
+    pub fn language_selector_without_icon(
+        l: L10N,
+        settings: impl AsRef<RwLock<Settings>>,
+        ui: &mut egui::Ui,
+    ) {
+        Self::language_selector_internal(
+            l.clone(),
+            settings,
+            ui,
+            l.current_language().display_name(),
+        );
+    }
+
+    fn language_selector_internal(
+        l: L10N,
+        settings: impl AsRef<RwLock<Settings>>,
+        ui: &mut egui::Ui,
+        selected_text: &str,
+    ) {
+        egui::ComboBox::from_id_salt("language_selector")
+            .selected_text(selected_text)
             .show_ui(ui, |ui| {
                 let mut new_language_code = l.current_language().code();
                 for language_code in L10N::available_language_codes() {
@@ -30,7 +57,7 @@ impl LanguageSelector {
                         .as_ref()
                         .write()
                         .expect("Failed to acquire write lock on settings.")
-                        .set_current_language(new_language_code);
+                        .set_current_language(ui, new_language_code);
                 }
             });
     }

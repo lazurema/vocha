@@ -52,6 +52,7 @@ impl Language for Esperanto {
                 Some(name) => format!("Projekto de Gridder - {}", name),
                 None => "Projekto de Gridder".to_owned(),
             },
+            Language => "Lingvo".to_owned(),
             Theme => "Etoso".to_owned(),
         }
     }

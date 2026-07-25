@@ -52,6 +52,7 @@ impl Language for English {
                 Some(name) => format!("Gridder Project - {}", name),
                 None => "Gridder Project".to_owned(),
             },
+            Language => "Language".to_owned(),
             Theme => "Theme".to_owned(),
         }
     }

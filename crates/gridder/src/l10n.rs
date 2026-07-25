@@ -125,6 +125,7 @@ pub enum Term {
     GridderProject {
         name: Option<String>,
     },
+    Language,
     Theme,
 }
 

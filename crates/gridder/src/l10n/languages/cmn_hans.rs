@@ -54,6 +54,7 @@ impl Language for ChineseMandarinSimplified {
                 Some(name) => format!("Gridder 项目 - {}", name),
                 None => "Gridder 项目".to_owned(),
             },
+            Language => "语言".to_owned(),
             Theme => "主题".to_owned(),
         }
     }
