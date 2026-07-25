@@ -4,11 +4,11 @@ pub struct English;
 
 impl Language for English {
     fn code(&self) -> &'static str {
-        "eng"
+        "eng-US"
     }
 
     fn display_name(&self) -> &'static str {
-        "English"
+        "English (American)"
     }
 
     fn tl(&self, term: &Term) -> String {

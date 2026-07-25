@@ -5,13 +5,17 @@ pub mod languages;
 use std::sync::{Arc, atomic::AtomicUsize};
 
 struct L {
-    eng: Box<dyn Language>,
+    cmn_hans: Box<dyn Language>,
+    eng_us: Box<dyn Language>,
+    epo: Box<dyn Language>,
 }
 
 impl L {
     fn new() -> Self {
         Self {
-            eng: Box::new(languages::eng::English),
+            cmn_hans: Box::new(languages::cmn_hans::ChineseMandarinSimplified),
+            eng_us: Box::new(languages::eng_us::English),
+            epo: Box::new(languages::epo::Esperanto),
         }
     }
 }
@@ -28,26 +32,35 @@ impl L10N {
     fn new() -> Self {
         Self {
             0: Arc::new(L10NImpl {
-                current_language_index: AtomicUsize::new(0),
+                current_language_index: AtomicUsize::new(
+                    Self::available_language_codes()
+                        .iter()
+                        .position(|&code| code == "eng-US")
+                        .expect("`eng-US` should always be available."),
+                ),
                 l: L::new(),
             }),
         }
     }
 
     pub fn available_language_codes() -> &'static [&'static str] {
-        &["eng"]
+        &["cmn-Hans", "eng-US", "epo"]
     }
 
     pub fn tl(&self, term: &Term) -> String {
         match self.current_language_code() {
-            "eng" => self.0.l.eng.tl(term),
-            _ => self.0.l.eng.tl(term),
+            "cmn-Hans" => self.0.l.cmn_hans.tl(term),
+            "eng-US" => self.0.l.eng_us.tl(term),
+            "epo" => self.0.l.epo.tl(term),
+            _ => self.0.l.eng_us.tl(term),
         }
     }
 
     pub fn get_language(&self, code: &'static str) -> Option<&Box<dyn Language>> {
         match code {
-            "eng" => Some(&self.0.l.eng),
+            "cmn-Hans" => Some(&self.0.l.cmn_hans),
+            "eng-US" => Some(&self.0.l.eng_us),
+            "epo" => Some(&self.0.l.epo),
             _ => None,
         }
     }

@@ -21,7 +21,7 @@ impl LanguageSelector {
                         ui.selectable_value(
                             &mut new_language_code,
                             language.code(),
-                            language.display_name(),
+                            format!("{}: {}", language.code(), language.display_name()),
                         );
                     }
                 }
